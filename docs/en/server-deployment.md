@@ -2,7 +2,7 @@
 
 *[Русский](../ru/server-deployment.md)*
 
-Release 0.1.0 is published for amd64/arm64. Use matching delivery files and manifest from [Releases](releases.md); private source access is unnecessary. Data will live on the VPS, whose operator/provider are within the [trust boundary](data-and-security.md).
+Release 0.1.1 is published for amd64/arm64. Use matching delivery files and manifest from [Releases](releases.md); private source access is unnecessary. Data will live on the VPS, whose operator/provider are within the [trust boundary](data-and-security.md).
 
 ## 1. Prepare SSH Access
 

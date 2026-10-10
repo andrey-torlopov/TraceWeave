@@ -4,7 +4,7 @@
 
 **Data lives on the host where you run Docker.** A local installation uses your computer. A VPS installation uses that remote server; its operator and provider are within your trust boundary. The browser also holds additional drafts on the computer used to open the application.
 
-This describes the standard 0.1.0 delivery. The diagrams reflect configuration and implementation, not an independent security audit or a guarantee that vulnerabilities cannot exist.
+This describes the standard 0.1.1 delivery. The diagrams reflect configuration and implementation, not an independent security audit or a guarantee that vulnerabilities cannot exist.
 
 ## Downloading and Running
 

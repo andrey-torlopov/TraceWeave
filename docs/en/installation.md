@@ -9,7 +9,7 @@ docker info --format '{{.ServerVersion}}'
 docker compose version
 ```
 
-Recorded acceptance used Engine 29.8.2 / Compose 5.5.1. Server Compose uses `!override`, which your version must support. Release 0.1.0 supports Linux amd64/arm64; macOS uses Docker's Linux environment.
+Recorded acceptance used Engine 29.8.2 / Compose 5.5.1. Server Compose uses `!override`, which your version must support. Release 0.1.1 supports Linux amd64/arm64; macOS uses Docker's Linux environment.
 
 ## Runtime and CLI
 

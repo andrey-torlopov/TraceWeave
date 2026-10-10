@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "releaseId": "0.1.0",
-  "frontendReleaseId": "0.1.0",
-  "frontendVersion": "0.1.0",
-  "backendVersion": "0.1.0",
+  "releaseId": "0.1.1",
+  "frontendReleaseId": "0.1.1",
+  "frontendVersion": "0.1.1",
+  "backendVersion": "0.1.1",
   "backendContractHash": "bd1c6ed182bbd63e91401bc7018593a92b76682c62c498a35a928e7dd26f832c",
   "images": {
-    "backend": "docker.io/andreytorlopov/traceweave-backend:0.1.0@sha256:1ac208443561c6b675faf7d04b6b4c053b80861404e006c927b0e6fc589c6f5b",
-    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.1.0@sha256:b61f5765d78ba6eb9734f8f931bcacbce7f7797a0c18457cf1cf4fa575ddff59",
-    "tools": "docker.io/andreytorlopov/traceweave-tools:0.1.0@sha256:858fe7801dd63c3b4cdc7df840d70990093d5caa17a90d149ab8c173fb4573d4",
-    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.1.0@sha256:1447283c4c478b2d0140fade066d75b2a02b4b58c362e8353915e4f34f209dfd",
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.1.1@sha256:931b40f9d9678b6bc3024f62a67216a492e17787f4dfb4c280f6db45d30282c4",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.1.1@sha256:0f328b10b3d0e5282f2f8ed5c837cbd89f87740b541fc85ac8a5ac313e354065",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.1.1@sha256:f5b3be8e1fafb677af9394bbdb852ca55757e90767b3e59a1b434844dd38d18f",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.1.1@sha256:4a1f0250651795d7f2d2e8fcb56446ea24bf23bbff54feb2278eff93a0c4e082",
     "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
   },
   "postgresMajor": 18,
@@ -48,13 +48,13 @@
     "linux/arm64"
   ],
   "source": {
-    "backend": "3367a53e71be71fbf1c90db7e6fb4d14b2ba3891",
-    "frontend": "b270b1cc3b3ec6e390740dd53cb87fdc4d03e567",
+    "backend": "7805c3069fca58cbae8d1f9572894c0d906461ed",
+    "frontend": "d707a19f396ea634a5616a371bb7cfc357ee9cd1",
     "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "delivery": "aa8543b44afaeeebdeb2e7c665bc6a4c40228637",
+    "delivery": "f8dbed0c827a42cf0df221a35a397805e9dac313",
     "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
-  "validation": "Native amd64/arm64 contract, frontend, API/media/export/restart/restore/faults/accounts/HTTPS passed; https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38072087934; anonymous registry pulls, Docker-only bootstrap/lifecycle and HTTPS/SMTP/accounts passed on fresh native hosts; https://github.com/andrey-torlopov/TraceWeave/actions/runs/38073642033",
+  "validation": "Native amd64/arm64 contract, frontend, API/media/export/restart/restore/faults/accounts/HTTPS passed; https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38081755609; anonymous registry pulls, Docker-only bootstrap/lifecycle and HTTPS/SMTP/accounts passed on fresh native hosts; https://github.com/andrey-torlopov/TraceWeave/actions/runs/38083756474",
   "rollback": "same migration history only; otherwise restore verified backup"
 }

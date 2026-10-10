@@ -9,7 +9,7 @@ docker info --format '{{.ServerVersion}}'
 docker compose version
 ```
 
-Поставка проверялась с Engine 29.8.2 / Compose 5.5.1; серверный Compose использует `!override`, который должен поддерживаться вашей версией. Выпуск 0.1.0 содержит образы для Linux amd64/arm64; на macOS они работают через Linux-среду Docker.
+Поставка проверялась с Engine 29.8.2 / Compose 5.5.1; серверный Compose использует `!override`, который должен поддерживаться вашей версией. Выпуск 0.1.1 содержит образы для Linux amd64/arm64; на macOS они работают через Linux-среду Docker.
 
 ## Runtime и CLI
 
