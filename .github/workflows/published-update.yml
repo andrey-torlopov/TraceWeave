@@ -29,7 +29,6 @@ jobs:
     env:
       TW_CANDIDATE_INPUT: ${{ inputs.candidate_json }}
       TW_VALIDATE_HTTP_CONTRACT: '1'
-      DOCKER_CONFIG: ${{ runner.temp }}/published-update-anonymous-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -43,6 +42,8 @@ jobs:
           persist-credentials: false
       - name: Prepare isolated inputs and current HTTP harness
         working-directory: harness
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/published-update-anonymous-${{ matrix.arch }}
         run: |
           python3 - <<'PY'
           import os, pathlib
@@ -51,6 +52,8 @@ jobs:
           credentials = pathlib.Path(os.environ['DOCKER_CONFIG'])
           assert not credentials.exists(), 'Anonymous Docker credential directory must be new.'
           credentials.mkdir(mode=0o700)
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write('DOCKER_CONFIG=' + str(credentials) + '\n')
           candidate = pathlib.Path(os.environ['RUNNER_TEMP']) / 'published-update-candidate.json'
           with candidate.open('xb') as out:
               os.chmod(candidate, 0o600)
