@@ -130,6 +130,104 @@ print('Second verified synthetic account fixture ready.')
 """
     control.compose('run','--rm','-T','--no-deps','--entrypoint','python3','ops','-c',script,capture=True)
 
+def node_deletion_smoke(owner):
+    # Keep this graph separate from the media/export/restart fixture used by smoke().
+    inv=owner.create('Node deletion acceptance '+uid());path='/api/v1/investigations/'+inv['id']
+    graph=owner.json('GET',path+'/graph');note=next(t['id'] for t in graph['nodeTypes'] if t['code']=='note')
+    relation_codes=sorted(t['code'] for t in graph['relationTypes'] if not t['isHidden'])
+    require(len(relation_codes)>=2,'Node deletion fixture requires two active relation types.')
+    a,b,c=uid(),uid(),uid();incident=[uid() for _ in range(4)];unrelated=uid()
+    commands=[]
+    for index,node in enumerate([a,b,c]):
+        commands.append({'kind':'node.create','node':{'id':node,'typeId':note,'title':'Deletion fixture '+str(index),
+            'bodyMarkdown':'Preserved document '+str(index),'tags':['deletion-fixture']},'position':{'x':index*120,'y':index*40}})
+    for relation,source,target,code,directed in [
+        (incident[0],a,b,relation_codes[0],True),
+        (incident[1],b,c,relation_codes[0],True),
+        (incident[2],a,b,relation_codes[1],True),
+        (incident[3],c,b,relation_codes[0],False),
+        (unrelated,a,c,relation_codes[0],True),
+    ]:
+        commands.append({'kind':'relation.create','relation':{'id':relation,'sourceNodeId':source,'targetNodeId':target,
+            'relationType':code,'directed':directed,'label':'Preserved relation','noteMarkdown':'Synthetic relation metadata',
+            'assessment':'hypothesis','confidence':'medium'}})
+    owner.commands(path,commands)
+    fixtures=ROOT/'tests/fixtures/media';item=next(i for i in json.loads((fixtures/'manifest.json').read_text()) if i['name']=='synthetic.txt')
+    data=(fixtures/item['name']).read_bytes();require(hashlib.sha256(data).hexdigest()==item['sha256'],'Deletion fixture checksum mismatch.')
+    ticket=owner.json('POST',path+'/uploads',{'idempotencyKey':uid(),'originalName':item['name'],
+        'expectedMimeType':item['mime'],'expectedByteSize':len(data)},expected=201)
+    complete=owner.json('PUT',path+'/uploads/'+ticket['id']+'/content',raw=data,headers={'Content-Type':'application/octet-stream'})
+    require(complete['sha256']==item['sha256'],'Deletion fixture upload hash differs.')
+    asset,attachment_a,attachment_b=uid(),uid(),uid()
+    owner.commands(path,[{'kind':'asset.register','uploadId':ticket['id'],'assetId':asset,
+        'metadata':{'title':'Deletion original','sourceUrl':None,'sourceAuthor':None,'sourceCreatedAt':None,'noteMarkdown':'Retain immutable original'}},
+        {'kind':'attachment.attach','attachment':{'id':attachment_a,'nodeId':a,'assetId':asset,'role':'attachment','caption':'Surviving usage','sortOrder':0}},
+        {'kind':'attachment.attach','attachment':{'id':attachment_b,'nodeId':b,'assetId':asset,'role':'primary','caption':'Retained trash attachment','sortOrder':0}}])
+
+    def state():
+        return {'investigation':owner.json('GET',path),'graph':owner.json('GET',path+'/graph'),
+            'documents':{node:owner.json('GET',path+'/nodes/'+node) for node in [a,b,c]},
+            'relations':{relation:owner.json('GET',path+'/relations/'+relation) for relation in [*incident,unrelated]},
+            'asset':owner.json('GET',path+'/assets/'+asset)}
+    before=state();revision=before['investigation']['revision']
+    require({x['nodeId'] for x in before['asset']['attachments']}=={a,b},'Deletion fixture must expose both active asset usages.')
+    trash={'kind':'elements.trash','nodeIds':[b],'relationIds':[],'groupMode':'group_only'}
+    for commands,base,status,code in [
+        ([trash],revision-1,409,'revision_conflict'),
+        ([dict(trash,nodeIds=[b,uid()])],revision,404,'not_found'),
+        ([dict(trash,relationIds=[uid()])],revision,404,'not_found'),
+        ([{'kind':'node.update','nodeId':a,'changes':{'bodyMarkdown':'Must roll back'}},trash,
+          {'kind':'node.update','nodeId':uid(),'changes':{'title':'Missing node'}}],revision,404,'not_found'),
+    ]:
+        rejected={'operationId':uid(),'clientId':uid(),'baseRevision':base,'commands':commands}
+        failure=owner.json('POST',path+'/commands',rejected,expected=status)
+        require(failure['error']['code']==code,'Node deletion negative case returned the wrong error.')
+        require(state()==before,'Rejected node deletion left partial data, metadata, usage or revision changes.')
+        require(owner.request('GET',path+'/assets/'+asset+'/content')[0]==data,'Rejected node deletion changed the original.')
+
+    batch={'operationId':uid(),'clientId':uid(),'baseRevision':revision,'commands':[trash]}
+    result=owner.json('POST',path+'/commands',batch)
+    require(result['revision']==revision+1 and not result['replayed'],'Node deletion must commit one revision.')
+    require(set(result['changedNodeIds'])=={b} and set(result['changedRelationIds'])==set(incident),
+        'Node deletion response must identify the node and every server-discovered incident relation.')
+    require(set(result['deletedIds'])=={b,*incident} and not result['changedAssetIds'],'Node deletion must retain the asset.')
+    replay=owner.json('POST',path+'/commands',batch)
+    require(replay==dict(result,replayed=True),'Exact node deletion replay changed the original command result.')
+    require(owner.json('GET',path)['revision']==revision+1,'Node deletion replay advanced the revision.')
+    owner.request('GET',path+'/nodes/'+b,expected=404)
+    deleted=owner.json('GET',path+'/nodes/'+b+'?includeDeleted=true')
+    batch_id=deleted['node']['deletionBatchId'];deleted_at=deleted['node']['deletedAt']
+    require(batch_id is not None and deleted_at is not None,'Trash node lacks deletion batch/time.')
+    require(deleted['revision']==revision+1,'Trash document revision differs from committed deletion.')
+    for field in ['id','typeId','title','bodyMarkdown','assessment','confidence','tags','extensions','createdAt','origin']:
+        require(deleted['node'][field]==before['documents'][b]['node'][field],'Trash lost document field '+field+'.')
+    for field in ['layout','attributes','attachments','assets','evidence']:
+        require(deleted[field]==before['documents'][b][field],'Trash lost document '+field+'.')
+    for relation in incident:
+        owner.request('GET',path+'/relations/'+relation,expected=404)
+        trashed=owner.json('GET',path+'/relations/'+relation+'?includeDeleted=true')['relation']
+        require(trashed['deletionBatchId']==batch_id and trashed['deletedAt']==deleted_at,'Incident relations were not deleted in the same batch.')
+        for field,value in before['relations'][relation]['relation'].items():
+            if field not in ['updatedAt','deletedAt','deletionBatchId']:
+                require(trashed[field]==value,'Trash changed relation metadata '+field+'.')
+    after=owner.json('GET',path+'/graph')
+    require(after['revision']==revision+1 and {n['id'] for n in after['nodes']}=={a,c},'Active graph retained the trashed node or lost a survivor.')
+    require(after['nodes']==[n for n in before['graph']['nodes'] if n['id']!=b],'Deletion changed surviving node summaries.')
+    require(after['layouts']==[x for x in before['graph']['layouts'] if x['nodeId']!=b],'Deletion changed surviving layouts or retained the deleted layout.')
+    require(after['relations']==[r for r in before['graph']['relations'] if r['id']==unrelated],'Deletion retained incident relations or changed an unrelated relation.')
+    for node in [a,c]:
+        require(owner.json('GET',path+'/nodes/'+node)==dict(before['documents'][node],revision=revision+1),'Deletion changed a surviving document.')
+    require(owner.json('GET',path+'/relations/'+unrelated)==dict(before['relations'][unrelated],revision=revision+1),'Deletion changed unrelated relation metadata.')
+    current_asset=owner.json('GET',path+'/assets/'+asset)
+    require(current_asset==dict(before['asset'],revision=revision+1,
+        attachments=[x for x in before['asset']['attachments'] if x['nodeId']==a]),'Deleted node appears as active usage or asset metadata changed.')
+    require(owner.request('GET',path+'/assets/'+asset+'/content?download=true')[0]==data,'Node deletion removed or changed downloadable original bytes.')
+    mismatch=dict(batch,commands=[dict(trash,nodeIds=[a])])
+    failure=owner.json('POST',path+'/commands',mismatch,expected=409)
+    require(failure['error']['code']=='idempotency_mismatch' and owner.json('GET',path+'/graph')==after,
+        'Changed deletion replay was accepted or changed the graph/revision.')
+    print('PASS real node deletion: incoming/outgoing/parallel/undirected cascade, atomic rejection/rollback, exact replay, retained metadata/original and active asset usage.',flush=True)
+
 def smoke(runtime,origin):
     owner=Client(origin);session=owner.login();require(session['user']['email']==EMAIL,'Canonical email missing.')
     require(owner.json('GET','/api/v1/accounts/config')['registrationEnabled'] is False,'Local registration must be disabled.')
@@ -173,6 +271,7 @@ def smoke(runtime,origin):
     owner.request('POST',path+'/commands',batch,headers={'Origin':'https://untrusted.example.test'},expected=403)
     owner.request('POST',path+'/commands',batch,headers={'X-CSRF-Token':'invalid'},expected=403)
     owner.request('GET',path,headers={'Host':'untrusted.example.test'},expected=403)
+    node_deletion_smoke(owner)
     print('PASS real email/session, command replay, all synthetic media, HEAD/Range, ZIP and two-account access boundaries.',flush=True)
     return owner,path,node,originals
 

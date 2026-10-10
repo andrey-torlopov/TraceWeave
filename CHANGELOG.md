@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-10-10
+
+- Deliver node deletion with cascading incident relations through backend/frontend 0.1.1.
+- Exercise cascade, atomic failure/replay and retained original downloads in native publication and anonymous registry checks.
+- Keep database migrations and the API contract unchanged.
+
 ## Unreleased
 
 ### Documentation boundary and banners — 2026-10-10
