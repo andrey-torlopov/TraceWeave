@@ -42,6 +42,20 @@ EXPECTED_CHECKS = {
 }
 
 
+def failure_location(error):
+    # Retain the innermost harness call site, including assertions raised by
+    # integration.require(). Never serialize traceback text, values or paths
+    # from private runtimes, dependencies or other checkouts.
+    location = None
+    trace = error.__traceback__
+    while trace is not None:
+        code = trace.tb_frame.f_code
+        if Path(code.co_filename).resolve() == ROOT / 'tools/published_update_test.py':
+            location = {'path': 'tools/published_update_test.py', 'line': trace.tb_lineno, 'function': code.co_name}
+        trace = trace.tb_next
+    return location
+
+
 def strict(raw):
     # Load the shared parser lazily, so --self-test also works without optional
     # OpenAPI packages. Its duplicate-key and finite-number rules apply in CI.
@@ -537,6 +551,23 @@ def verify(args, evidence):
 
 
 def self_test():
+    def diagnostic_fixture():
+        private_value = 'synthetic-secret-local-and-message /private/runtime/operator.log'
+        require(False, private_value)
+
+    try:
+        diagnostic_fixture()
+    except AssertionError as error:
+        location = failure_location(error)
+        require(set(location) == {'path', 'line', 'function'} and
+                location['path'] == 'tools/published_update_test.py' and
+                type(location['line']) is int and location['line'] > 0 and
+                location['function'] == 'diagnostic_fixture', 'Unsafe or incomplete public failure location.')
+        public = json.dumps(location)
+        require('synthetic-secret' not in public and '/private/runtime' not in public and str(ROOT) not in public,
+                'Public failure location leaked exception text, local values or an absolute path.')
+    require(failure_location(AssertionError('synthetic-secret-without-traceback')) is None,
+            'Unraised exception produced a public failure location.')
     base = json.loads((ROOT / 'releases/0.1.0.json').read_text())
     candidate = copy.deepcopy(base)
     for key in ['releaseId', 'frontendReleaseId', 'frontendVersion', 'backendVersion']:
@@ -661,6 +692,9 @@ def main():
         evidence.pop('activeCheck', None)
     except Exception as error:
         evidence['errorClass'] = type(error).__name__
+        location = failure_location(error)
+        if location is not None:
+            evidence['errorLocation'] = location
         print('FAIL published update verification: ' + evidence.get('activeCheck', 'preflight') +
               ' (' + evidence['errorClass'] + '); private diagnostics remain on the runner.', file=sys.stderr)
     finally:
