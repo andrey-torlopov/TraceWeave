@@ -41,4 +41,20 @@
 
 ## Результат
 
-В работе. Публикация пока не подтверждена.
+Подготовка и GitHub integration выполнены; Docker Hub publication ожидает SOURCE_REPOSITORIES_TOKEN.
+
+- В main поставки отправлен aa8543b (builder, CLI/tests/docs, private source checkout); v0.1.0 создан на этом commit.
+- В backend main отправлен 3b4882b, во frontend main — a0fa01d: одинаковые .github/workflows/dockerhub.yml, зарегистрированные GitHub как active. Их v0.1.0 закрепляют исходный принятый код до установки tag-trigger workflow: backend 3367a53, frontend b270b1c. Теги созданы и отправлены до workflows; ручной первый full_release строит именно их, номера версий не зависят от workflow commit.
+- В backend/frontend установлены Variables TRACEWEAVE_DELIVERY_TAG=v0.1.0 и TRACEWEAVE_COUNTERPART_TAG=v0.1.0; прежние DOCKERHUB_TOKEN/DOCKERHUB_USERNAME сохранены. Secret SOURCE_REPOSITORIES_TOKEN пока отсутствует в трёх repositories.
+- Владелец включил immutable tags; актуальный Docker Hub API подтвердил Public и immutable_tags_settings={enabled:true,rules:[".*"]} для всех четырёх repositories.
+- Проверки: 97 unit tests OK; sh -n OK; git diff --check OK; actionlint 1.7.12 (официальный archive/checksum, временный каталог) OK для всех трёх workflows. Извлечённые shell/Python/YAML блоки, tag selection и provenance checks PASS. Remote main/tag commits и bytes обоих workflows сверены с локальными файлами через GitHub API.
+- После main push запустился [delivery CI 38071338668](https://github.com/andrey-torlopov/TraceWeave/actions/runs/38071338668): обе архитектуры failed на checkout приватного backend; до unit/build/integration не дошли. Это подтверждает отсутствие source-access Secret и не является дефектом Docker Hub PAT. После настройки Secret этот run можно rerun; полный publication run запускается отдельно из backend main.
+- Registry push, release Docker builds, anonymous pulls, registry-digest manifest/stable promotion и чистый bootstrap — not_run до готовности source access. GitHub Release assets не создавались; существующие Git tags не переносятся. Рабочие установки, миграции, зависимости и БД не изменены.
+
+Команда первого выпуска после добавления Secret во все три repositories:
+
+```sh
+gh workflow run dockerhub.yml --repo andrey-torlopov/TraceWeaveBackend --ref main -f release_tag=v0.1.0 -f full_release=true
+```
+
+Не запускайте обычный frontend v0.1.0 параллельно полному выпуску: полный выпуск публикует также frontend. Следующий компонент выпускается новым version tag. AC-65/66 подтверждены только в объёме подготовленного version/provenance workflow; реальная registry/runtime приёмка ещё не завершена.
