@@ -1,0 +1,90 @@
+name: Docker delivery
+on:
+  pull_request:
+  push:
+    branches: [main, codex/docker-delivery]
+  workflow_dispatch:
+    inputs:
+      backend_revision:
+        description: Optional exact backend commit (40 hex characters)
+        type: string
+      frontend_revision:
+        description: Optional exact frontend commit (40 hex characters)
+        type: string
+permissions:
+  contents: read
+jobs:
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Select exact independent source revisions
+        id: versions
+        env:
+          BACKEND_INPUT: ${{ inputs.backend_revision }}
+          FRONTEND_INPUT: ${{ inputs.frontend_revision }}
+        run: |
+          python3 - <<'PY'
+          import json,os,re
+          v=json.load(open('releases/source-lock.json'))
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              for name in ['backend','frontend']:
+                  value=os.environ.get(name.upper()+'_INPUT') or v[name]
+                  if not re.fullmatch('[a-f0-9]{40}',value):raise SystemExit('An exact source commit is required.')
+                  out.write(name+'='+value+'\n')
+          PY
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: andrey-torlopov/TraceWeaveBackend
+          ref: ${{ steps.versions.outputs.backend }}
+          path: .ci/backend
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: andrey-torlopov/TraceWeaveFrontend
+          ref: ${{ steps.versions.outputs.frontend }}
+          path: .ci/frontend
+          persist-credentials: false
+      - name: Validate contract and operator failure cases
+        run: |
+          python3 -m venv .ci/venv
+          .ci/venv/bin/pip install -r tools/requirements-validation.txt
+          .ci/venv/bin/python tools/validate_contracts.py
+          .ci/venv/bin/python -m unittest discover -s tests -v
+          .ci/venv/bin/python -m unittest discover -s tests/contracts -p test_contracts.py -v
+          python3 -I tools/ci_release_tests.py --self-test
+          python3 -I tools/update_integration.py --help
+          sh -n bootstrap.sh traceweave.sh db/entrypoint.sh db/init.sh
+      - name: Build independent immutable images
+        run: sh ./traceweave.sh build-source --release-id e8-docker-1 --backend-path .ci/backend --frontend-path .ci/frontend
+      - name: Real API, media, export, restart, maintenance and restore
+        env:
+          TW_VALIDATE_HTTP_CONTRACT: '1'
+        run: .ci/venv/bin/python tools/integration.py --release releases/e8-docker-1.local.json --runtime "$PWD/runtime/tests_ci/http" --port 18080
+      - name: Build successive synthetic versions of the same locked current sources
+        run: |
+          sh ./traceweave.sh build-source --release-id ci-next --backend-path .ci/backend --frontend-path .ci/frontend
+          python3 -I tools/ci_release_tests.py --base releases/e8-docker-1.local.json --next releases/ci-next.local.json
+      - name: Real frontend-only and backend-only transitions on current code
+        env:
+          TW_VALIDATE_HTTP_CONTRACT: '1'
+        run: |
+          TW_RUNTIME_DIR="$PWD/runtime/tests_ci/http" sh ./traceweave.sh start
+          .ci/venv/bin/python tools/update_integration.py --runtime "$PWD/runtime/tests_ci/http" --frontend-release releases/ci-frontend-only.local.json --backend-release releases/ci-backend-only.local.json
+      - name: Real marked fault recovery and isolation
+        run: .ci/venv/bin/python tools/fault_integration.py --test-root "$PWD/runtime/tests_ci" --runtime "$PWD/runtime/tests_ci/http" --protocol "$PWD/runtime/tests_ci/fault.log"
+      - name: Real account registration, SMTP and HTTPS certificate verification
+        run: .ci/venv/bin/python tests/account_https.py --release releases/e8-docker-1.local.json --test-root "$PWD/runtime/tests_ci" --runtime "$PWD/runtime/tests_ci/accounts" --protocol "$PWD/runtime/tests_ci/accounts.log"
+      - name: Stop the marked synthetic installation
+        if: always()
+        run: |
+          if test -f runtime/tests_ci/http/synthetic-installation.json && test -f runtime/tests_ci/http/installation.json && python3 -I -c 'import json,sys; sys.exit(json.load(open(sys.argv[1])) != {"synthetic": True, "email": "docker-owner@example.test"})' runtime/tests_ci/http/synthetic-installation.json; then
+            TW_RUNTIME_DIR="$PWD/runtime/tests_ci/http" sh ./traceweave.sh stop
+          fi

@@ -1,0 +1,39 @@
+# Explicitly isolated synthetic acceptance fixture. Never use for an installation.
+services:
+  backend:
+    environment:
+      RG_PUBLIC_ORIGIN: ${TW_ACCOUNT_TEST_ORIGIN:?}
+      RG_REGISTRATION_ENABLED: "true"
+      RG_SMTP_URL: smtps://smtp:2465
+      RG_SMTP_USER: synthetic
+      RG_SMTP_FROM: synthetic@example.test
+      RG_SMTP_CA_FILE: /etc/account-test/ca.crt
+    volumes:
+      - ${TW_RUNTIME_DIR:?}/account-certificates:/etc/account-test:ro
+    networks: !override [application, database, account_mail]
+    depends_on:
+      smtp: {condition: service_healthy}
+  gateway:
+    ports: !override ["127.0.0.1:${TW_ACCOUNT_TEST_PORT:?}:8443"]
+    volumes:
+      - ${TW_RUNTIME_DIR:?}/account-certificates:/etc/account-test:ro
+  smtp:
+    image: ${TW_TOOLS_IMAGE:?}
+    user: "${TW_OPERATOR_UID:?}:${TW_OPERATOR_GID:?}"
+    entrypoint: [python3, /test/smtp_fixture.py]
+    volumes:
+      - ./tests/smtp_fixture.py:/test/smtp_fixture.py:ro
+      - ${TW_RUNTIME_DIR:?}/account-certificates:/fixture:ro
+      - ${TW_RUNTIME_DIR:?}/account-mail:/capture
+    networks: [account_mail]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, python3, /test/smtp_fixture.py, --probe]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+networks:
+  account_mail: {internal: true}

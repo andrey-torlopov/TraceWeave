@@ -1,0 +1,143 @@
+name: ${TW_INSTALL_ID:?Run bootstrap first}
+x-backend: &backend
+  image: ${TW_BACKEND_IMAGE:?Select a release}
+  environment: &backend-env
+    RG_BIND_HOST: 0.0.0.0
+    RG_PORT: "8080"
+    RG_PUBLIC_ORIGIN: ${TW_PUBLIC_ORIGIN:?}
+    RG_CONTAINER_MODE: "true"
+    RG_TRUSTED_PROXY_CIDRS: ${TW_GATEWAY_IP:?}/32
+    RG_DATABASE_URL_FILE: /run/secrets/db_url
+    RG_DATABASE_TLS_MODE: verify-full
+    RG_DATABASE_CA_FILE: /run/secrets/db_ca
+    RG_DATA_DIR: /var/lib/traceweave
+    RG_REGISTRATION_ENABLED: ${TW_REGISTRATION_ENABLED:-false}
+    RG_SUPPORTED_CLIENT_CONTRACTS: ${TW_SUPPORTED_CLIENT_CONTRACTS:?}
+    RG_SMTP_URL: ${TW_SMTP_URL:-}
+    RG_SMTP_USER: ${TW_SMTP_USER:-}
+    RG_SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+    RG_SMTP_FROM: ${TW_SMTP_FROM:-}
+  secrets: [db_url, db_ca, smtp_password]
+  volumes: [files:/var/lib/traceweave]
+  networks: [application, database, mail]
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  stop_grace_period: 180s
+services:
+  db:
+    image: ${TW_POSTGRES_IMAGE:?}
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /opt/traceweave/entrypoint.sh]
+    command: [postgres, -c, ssl=on, -c, ssl_cert_file=/run/traceweave-tls/server.crt, -c, ssl_key_file=/run/traceweave-tls/server.key, -c, log_statement=none, -c, log_min_error_statement=panic, -c, log_error_verbosity=terse]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_admin_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=trust
+    secrets: [db_admin_password, db_app_password, db_key, db_cert]
+    volumes:
+      - database:/var/lib/postgresql
+      - ./db/entrypoint.sh:/opt/traceweave/entrypoint.sh:ro
+      - ./db/init.sh:/docker-entrypoint-initdb.d/10-traceweave.sh:ro
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d postgres]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+  backend:
+    <<: *backend
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+  frontend:
+    image: ${TW_FRONTEND_IMAGE:?}
+    restart: unless-stopped
+    volumes: [previous_assets:/srv/previous-assets:ro]
+    networks: [application]
+    read_only: true
+    tmpfs: [/tmp, /config, /data]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  gateway:
+    image: ${TW_GATEWAY_IMAGE:?}
+    restart: unless-stopped
+    user: "10001:10001"
+    entrypoint: [caddy]
+    command: [run, --config, /etc/traceweave/Caddyfile, --adapter, caddyfile]
+    environment:
+      XDG_DATA_HOME: /data
+      XDG_CONFIG_HOME: /config
+    ports: ["127.0.0.1:${TW_PORT:-8080}:8080"]
+    volumes:
+      - ${TW_RUNTIME_DIR:?}/gateway:/etc/traceweave:ro
+      - ./gateway/maintenance.html:/srv/maintenance.html:ro
+      - gateway_data:/data
+      - gateway_config:/config
+    networks:
+      application: {ipv4_address: "${TW_GATEWAY_IP:?}"}
+      edge: {}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/gateway-health]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  migrate:
+    <<: *backend
+    command: [migrate]
+    profiles: [tools]
+  owner:
+    <<: *backend
+    profiles: [tools]
+    stdin_open: true
+    tty: true
+  ops:
+    image: ${TW_TOOLS_IMAGE:?}
+    profiles: [tools]
+    environment:
+      RG_DATABASE_URL_FILE: /run/secrets/db_url
+      RG_DATABASE_CA_FILE: /run/secrets/db_ca
+      PG_ADMIN_PASSWORD_FILE: /run/secrets/db_admin_password
+      TW_OPERATOR_UID: ${TW_OPERATOR_UID:?}
+      TW_OPERATOR_GID: ${TW_OPERATOR_GID:?}
+    secrets: [db_url, db_ca, db_admin_password]
+    volumes:
+      - files:/data
+      - database:/database-capacity:ro
+      - previous_assets:/previous-assets
+      - ${TW_RUNTIME_DIR:?}:/state
+    networks: [database]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+networks:
+  application:
+    internal: true
+    ipam:
+      config:
+        - subnet: "${TW_APPLICATION_SUBNET:?}"
+          ip_range: "${TW_APPLICATION_DYNAMIC_RANGE:-}"
+  database: {internal: true}
+  edge: {}
+  mail: {}
+volumes:
+  database: {external: true, name: "${TW_DATABASE_VOLUME:?}"}
+  files: {external: true, name: "${TW_FILES_VOLUME:?}"}
+  previous_assets: {external: true, name: "${TW_ASSETS_VOLUME:?}"}
+  gateway_data: {external: true, name: "${TW_GATEWAY_DATA_VOLUME:?}"}
+  gateway_config: {external: true, name: "${TW_GATEWAY_CONFIG_VOLUME:?}"}
+secrets:
+  db_url: {file: "${TW_RUNTIME_DIR:?}/secrets/db_url"}
+  db_ca: {file: "${TW_RUNTIME_DIR:?}/secrets/ca.crt"}
+  db_key: {file: "${TW_RUNTIME_DIR:?}/secrets/db.key"}
+  db_cert: {file: "${TW_RUNTIME_DIR:?}/secrets/db.crt"}
+  db_app_password: {file: "${TW_RUNTIME_DIR:?}/secrets/db_app_password"}
+  db_admin_password: {file: "${TW_RUNTIME_DIR:?}/secrets/db_admin_password"}
+  smtp_password: {file: "${TW_RUNTIME_DIR:?}/secrets/smtp_password"}

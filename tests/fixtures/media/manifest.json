@@ -1,0 +1,190 @@
+[
+  {
+    "name": "preview-limit.png",
+    "mime": "image/png",
+    "kind": "image",
+    "byteSize": 101494,
+    "sha256": "843f5748589a16c7bc4748694feaec7a260834c2d84880bd7809ab8bcaf0c82a",
+    "streams": [
+      {
+        "codec_name": "png",
+        "codec_type": "video",
+        "width": 8000,
+        "height": 4001
+      }
+    ]
+  },
+  {
+    "name": "synthetic.gif",
+    "mime": "image/gif",
+    "kind": "image",
+    "byteSize": 1274,
+    "sha256": "d5ceb39d7916fe09a4ecd01c24328952128647a4d0e176d6710a4875923f88aa",
+    "streams": [
+      {
+        "codec_name": "gif",
+        "codec_type": "video",
+        "width": 96,
+        "height": 64
+      }
+    ]
+  },
+  {
+    "name": "synthetic.jpg",
+    "mime": "image/jpeg",
+    "kind": "image",
+    "byteSize": 259,
+    "sha256": "f40a7fd7bdf4f6a78f8f38a1ec305390c2e52859df693b6538bd935e89891c5d",
+    "streams": [
+      {
+        "codec_name": "mjpeg",
+        "codec_type": "video",
+        "width": 96,
+        "height": 64
+      }
+    ]
+  },
+  {
+    "name": "synthetic.m4a",
+    "mime": "audio/mp4",
+    "kind": "audio",
+    "byteSize": 17596,
+    "sha256": "c8bf2fc18df15a1e501c83e118464fec1eea8356f4f18ac375c5002763cf6290",
+    "streams": [
+      {
+        "codec_name": "aac",
+        "codec_type": "audio"
+      }
+    ]
+  },
+  {
+    "name": "synthetic.md",
+    "mime": "text/markdown",
+    "kind": "text",
+    "byteSize": 45,
+    "sha256": "3c2496bb504ad9680595b66c6cf621445e4f78da010d92357aa3d8f839c33f5d",
+    "streams": []
+  },
+  {
+    "name": "synthetic.mp3",
+    "mime": "audio/mpeg",
+    "kind": "audio",
+    "byteSize": 16641,
+    "sha256": "dcee72bf3a5fdcbbbbf5ae1c3ea38050cab1676063411c2aa9786ec1eb8df16d",
+    "streams": [
+      {
+        "codec_name": "mp3",
+        "codec_type": "audio"
+      }
+    ]
+  },
+  {
+    "name": "synthetic.mp4",
+    "mime": "video/mp4",
+    "kind": "video",
+    "byteSize": 45101,
+    "sha256": "6d21a5089624fe0c2d55429de75e8c07600ce3f2b5a799231a7be89423abeb2c",
+    "streams": [
+      {
+        "codec_name": "h264",
+        "codec_type": "video",
+        "width": 128,
+        "height": 96
+      }
+    ]
+  },
+  {
+    "name": "synthetic.ogg",
+    "mime": "audio/ogg",
+    "kind": "audio",
+    "byteSize": 18310,
+    "sha256": "0cb1b813ed2e6e2045da0a729bd4401f5f37b640375cc442a4e322dd780f8f3f",
+    "streams": [
+      {
+        "codec_name": "opus",
+        "codec_type": "audio"
+      }
+    ]
+  },
+  {
+    "name": "synthetic.png",
+    "mime": "image/png",
+    "kind": "image",
+    "byteSize": 162,
+    "sha256": "b5f29aeb5c03878cb66f5daacc028f3600c6f5236b1cfa3d18d487e483ce3e1e",
+    "streams": [
+      {
+        "codec_name": "png",
+        "codec_type": "video",
+        "width": 96,
+        "height": 64
+      }
+    ]
+  },
+  {
+    "name": "synthetic.txt",
+    "mime": "text/plain",
+    "kind": "text",
+    "byteSize": 43,
+    "sha256": "2b81fb8df86de502f5b6e383fcd2d0fa0b709a62fd29721edbe977886d4131c8",
+    "streams": []
+  },
+  {
+    "name": "synthetic.wav",
+    "mime": "audio/wav",
+    "kind": "audio",
+    "byteSize": 128078,
+    "sha256": "b1edc08ccbb19651bf12deb7ac47f1ed0cc81971b31a1592c4ded8dba6823b6d",
+    "streams": [
+      {
+        "codec_name": "pcm_s16le",
+        "codec_type": "audio"
+      }
+    ]
+  },
+  {
+    "name": "synthetic.webm",
+    "mime": "video/webm",
+    "kind": "video",
+    "byteSize": 42082,
+    "sha256": "7204d835394366d5ca3e22d4cd75c96569b57496c980568a03b7cd04d2f29f69",
+    "streams": [
+      {
+        "codec_name": "vp8",
+        "codec_type": "video",
+        "width": 128,
+        "height": 96
+      }
+    ]
+  },
+  {
+    "name": "synthetic.webp",
+    "mime": "image/webp",
+    "kind": "image",
+    "byteSize": 86,
+    "sha256": "e5b430ad40f7602b8d887075aecff83c3927a1ec152ec8081ae9f119c4191bf5",
+    "streams": [
+      {
+        "codec_name": "webp",
+        "codec_type": "video",
+        "width": 96,
+        "height": 64
+      }
+    ]
+  },
+  {
+    "name": "unsupported-prores.mov",
+    "mime": "video/quicktime",
+    "kind": "video",
+    "byteSize": 2630,
+    "sha256": "1e34cb42a8948d7fa7a97247aa6619d5c36fbcbd313cc181631b9c717e85404c",
+    "streams": [
+      {
+        "codec_name": "prores",
+        "codec_type": "video",
+        "width": 64,
+        "height": 64
+      }
+    ]
+  }
+]
