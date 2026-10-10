@@ -8,8 +8,8 @@
 | Основания | Прямое разрешение владельца 2026-10-10 на файлы, commits, push, теги и Docker Hub publication; CR-E8-001; ТЗ §21.5, §25.3–25.4, AC-65/66; TW-E8-002. |
 | Контракты | Release manifest formatVersion=1; SemVer; OCI version/ref/revision; registry digests; существующие API/миграции не меняются. |
 | Входные зависимости | Три самостоятельных repositories; GitHub Actions; DOCKERHUB_TOKEN и DOCKERHUB_USERNAME; доступ Contents: Read к обоим приватным source repositories; четыре Public Docker Hub repositories с immutable tags. |
-| Владелец | Координатор A — агент /root текущего чата; независимый агент выполняет только review. |
-| Разрешённые файлы | SRC/TraceWeaveBackend/.github/workflows/dockerhub.yml; SRC/TraceWeaveFrontend/.github/workflows/dockerhub.yml; SRC/TraceWeave/.github/workflows/delivery.yml; файлы TW-E8-002; SRC/TraceWeave/docs/tasks/TW-E8-003-dockerhub-publication.md; SRC/TraceWeave/docs/ru/releases.md; SRC/TraceWeave/docs/en/releases.md; SRC/TraceWeave/releases/0.1.0.json; SRC/TraceWeave/releases/stable.json; SRC/TraceWeave/releases/tools-image.txt; Artifacts/docker-publication-status.md; PROJECT.md. |
+| Владелец | Координатор A — агент /root текущего чата; агент /root/release_verification владеет только новым registry-verification.yml, интеграция и выпуск остаются у координатора. |
+| Разрешённые файлы | SRC/TraceWeaveBackend/.github/workflows/dockerhub.yml; SRC/TraceWeaveFrontend/.github/workflows/dockerhub.yml; SRC/TraceWeave/.github/workflows/delivery.yml; SRC/TraceWeave/.github/workflows/registry-verification.yml; файлы TW-E8-002; SRC/TraceWeave/docs/tasks/TW-E8-003-dockerhub-publication.md; SRC/TraceWeave/docs/ru/releases.md; SRC/TraceWeave/docs/en/releases.md; SRC/TraceWeave/releases/0.1.0.json; SRC/TraceWeave/releases/stable.json; SRC/TraceWeave/releases/tools-image.txt; Artifacts/docker-publication-status.md; PROJECT.md. |
 | Запретные зоны | Доменные sources, API/схемы, миграции, зависимости/lock-файлы, пользовательские runtime/БД/volumes, глобальные настройки. Приватность GitHub repositories не менять без отдельного указания. |
 | Проверки | Unit suite; shell/Python/YAML checks; remote refs; имена секретов без значений; Public/immutable Docker Hub settings; native amd64/arm64 CI; registry manifests/digests; анонимный pull и отдельный синтетический runtime. |
 | Выход | Установленные workflows, версии и настройки GitHub, протокол реальных CI/registry результатов, инструкция оставшихся действий владельца. |
@@ -39,7 +39,7 @@
 - Verification: unit/static checks, remote refs, Actions job conclusions и registry metadata; невыполненные проверки отмечать явно.
 - Confirmation: текущее прямое поручение владельца разрешает эти действия; дополнительная публикация/развёртывание вне указанного scope не выполняется.
 
-## Результат
+## Первый этап: до настройки source access
 
 Подготовка и GitHub integration выполнены; Docker Hub publication ожидает SOURCE_REPOSITORIES_TOKEN.
 
@@ -58,3 +58,9 @@ gh workflow run dockerhub.yml --repo andrey-torlopov/TraceWeaveBackend --ref mai
 ```
 
 Не запускайте обычный frontend v0.1.0 параллельно полному выпуску: полный выпуск публикует также frontend. Следующий компонент выпускается новым version tag. AC-65/66 подтверждены только в объёме подготовленного version/provenance workflow; реальная registry/runtime приёмка ещё не завершена.
+
+## Продолжение после настройки Source Secret
+
+Владелец создал SOURCE_REPOSITORIES_TOKEN и добавил его в три repositories. API подтвердил наличие имён (значения не читаются); checkout обоих приватных sources реально прошёл. Запущен [полный publication run 38072087934](https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38072087934) из backend main с release_tag=v0.1.0/full_release=true. Prepare, contract/unit/frontend checks прошли на обеих архитектурах; native Docker builds в работе.
+
+Добавлен отдельный workflow registry-verification.yml: только workflow_dispatch, полный candidate JSON и delivery tag, две свежие native VM, пустой DOCKER_CONFIG, anonymous pulls и проверка OCI/baked metadata/source/contract. HTTP integration использует Docker-only CLI с PATH без host Python; абсолютный host Python служит только HTTP/PTY test harness. HTTPS/SMTP/account lifecycle проверяется отдельно. Только помеченные synthetic runtimes, stop сохраняет volumes; в artifact попадает компактное evidence без приватных логов. Actionlint, bash syntax всех 7 run blocks и AST heredocs прошли; настоящий registry run возможен после получения публикационного artifact.

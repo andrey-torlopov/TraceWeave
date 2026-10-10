@@ -1,0 +1,213 @@
+name: Published registry verification
+on:
+  workflow_dispatch:
+    inputs:
+      delivery_tag:
+        description: Existing delivery GitHub tag matching candidate source.delivery
+        type: string
+        required: true
+        default: v0.1.0
+      manifest_json:
+        description: Complete candidate.json from a successful full publication
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: registry-verification-${{ github.repository }}-${{ inputs.delivery_tag }}
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+jobs:
+  clean-host:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      TW_DELIVERY_TAG: ${{ inputs.delivery_tag }}
+      TW_MANIFEST_INPUT: ${{ inputs.manifest_json }}
+      TW_ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Validate input and establish an empty Docker credential directory
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/traceweave-anonymous-${{ matrix.arch }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, re
+          tag = os.environ['TW_DELIVERY_TAG']
+          assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', tag), 'Use a stable vMAJOR.MINOR.PATCH tag.'
+          raw = os.environ['TW_MANIFEST_INPUT']
+          assert len(raw.encode()) <= 60000, 'Candidate input exceeds the verification bound.'
+          value = json.loads(raw)
+          assert isinstance(value, dict) and value.get('formatVersion') == 1, 'A complete formatVersion=1 candidate is required.'
+          directory = pathlib.Path(os.environ['DOCKER_CONFIG'])
+          assert not directory.exists(), 'Anonymous Docker configuration must be new.'
+          directory.mkdir(mode=0o700)
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write('DOCKER_CONFIG=' + str(directory) + '\n')
+          PY
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: andrey-torlopov/TraceWeave
+          ref: refs/tags/${{ inputs.delivery_tag }}
+          path: delivery
+          persist-credentials: false
+      - name: Prepare the HTTP test harness
+        working-directory: delivery
+        run: |
+          python3 -m venv "$RUNNER_TEMP/traceweave-verification-venv"
+          "$RUNNER_TEMP/traceweave-verification-venv/bin/pip" install -r tools/requirements-validation.txt
+          printf 'TW_TEST_PYTHON=%s\n' "$RUNNER_TEMP/traceweave-verification-venv/bin/python" >> "$GITHUB_ENV"
+      - name: Anonymous native pull and version provenance
+        id: pull
+        working-directory: delivery
+        run: |
+          "$TW_TEST_PYTHON" -B - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess, sys
+          sys.path.insert(0, str(pathlib.Path.cwd()))
+          from tools.control import PG_IMAGE, validate_manifest
+          from tools.validate_contracts import strict_json
+          release = validate_manifest(strict_json(os.environ['TW_MANIFEST_INPUT'].encode()))
+          semver = r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+          assert re.fullmatch(semver, release['releaseId'])
+          assert set(release['images']) == {'backend', 'frontend', 'gateway', 'tools', 'postgres'}
+          assert release['platforms'] == ['linux/amd64', 'linux/arm64']
+          assert release['frontendReleaseId'] == release['frontendVersion']
+          source = release['source']
+          for key in ['backend', 'frontend', 'delivery']:
+              assert re.fullmatch(r'[a-f0-9]{40}', source[key]), 'Missing source revision: ' + key
+              assert source[key + 'DiffHash'] == hashlib.sha256(b'').hexdigest(), 'Published source must be clean: ' + key
+          head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          assert source['delivery'] == head, 'Delivery tag differs from candidate provenance.'
+          contract = hashlib.sha256(pathlib.Path('contracts/openapi.yaml').read_bytes()).hexdigest()
+          assert release['contractHash'] == release['backendContractHash'] == contract
+          versions = dict(backend=release['backendVersion'], frontend=release['frontendVersion'],
+              gateway=os.environ['TW_DELIVERY_TAG'][1:], tools=os.environ['TW_DELIVERY_TAG'][1:])
+          for key, version in versions.items():
+              assert re.fullmatch(semver, version), 'Invalid component version: ' + key
+              assert re.fullmatch(r'docker\.io/andreytorlopov/traceweave-' + key + ':' + re.escape(version) + r'@sha256:[a-f0-9]{64}', release['images'][key]), 'Expected a versioned public registry digest: ' + key
+          assert release['images']['postgres'] == PG_IMAGE, 'Unexpected database image.'
+          assert not list(pathlib.Path(os.environ['DOCKER_CONFIG']).iterdir()), 'Anonymous pulls must start without credentials.'
+          server_arch = subprocess.check_output(['docker', 'info', '--format', '{{.Architecture}}'], text=True).strip()
+          native = {'x86_64': 'amd64', 'aarch64': 'arm64'}.get(server_arch, server_arch)
+          assert native == os.environ['TW_ARCH'], 'Runner architecture differs from the native test matrix.'
+          observed = {}
+          for key, ref in release['images'].items():
+              subprocess.run(['docker', 'pull', ref], check=True)
+              inspected = json.loads(subprocess.check_output(['docker', 'image', 'inspect', ref], text=True))[0]
+              assert inspected['Os'] == 'linux' and inspected['Architecture'] == native, 'Pulled image is not native: ' + key
+              if key != 'postgres':
+                  origin = key if key in ['backend', 'frontend'] else 'delivery'
+                  labels = inspected['Config']['Labels'] or {}
+                  repository = 'TraceWeave' + {'backend': 'Backend', 'frontend': 'Frontend'}.get(key, '')
+                  assert labels['org.opencontainers.image.version'] == versions[key]
+                  assert labels['org.opencontainers.image.ref.name'] == 'v' + versions[key]
+                  assert labels['org.opencontainers.image.revision'] == source[origin]
+                  assert labels['org.opencontainers.image.source'] == 'https://github.com/andrey-torlopov/' + repository
+              observed[key] = dict(reference=ref, imageId=inspected['Id'], platform='linux/' + native)
+          def metadata(key, filename):
+              return json.loads(subprocess.check_output(['docker', 'run', '--rm', '--network', 'none', '--entrypoint', 'cat', release['images'][key], filename], text=True))
+          backend = metadata('backend', '/app/backend-release.json')
+          assert backend['backendVersion'] == release['backendVersion'] and backend['contractHash'] == release['backendContractHash']
+          assert backend['sourceRevision'] == source['backend']
+          assert metadata('frontend', '/opt/traceweave/frontend-release.json') == dict(releaseId=release['frontendReleaseId'], frontendVersion=release['frontendVersion'], contractHash=release['contractHash'])
+          output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'traceweave-registry-evidence'
+          output.mkdir(mode=0o700)
+          (output/'candidate.json').write_text(json.dumps(release, indent=2) + '\n')
+          (output/'pull.json').write_text(json.dumps(dict(releaseId=release['releaseId'], deliveryTag=os.environ['TW_DELIVERY_TAG'], source=source, images=observed, anonymousPull=True, nativePlatform='linux/' + native), indent=2) + '\n')
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write('TW_CANDIDATE=' + str(output/'candidate.json') + '\n')
+              out.write('TW_TOOLS_IMAGE=' + release['images']['tools'] + '\n')
+          print('PASS anonymous native pulls, source provenance, OCI versions and baked runtime metadata.')
+          PY
+      - name: Real bootstrap, HTTP contract, restart, backup and restore through the Docker-only CLI
+        id: http
+        working-directory: delivery
+        env:
+          TW_VALIDATE_HTTP_CONTRACT: '1'
+        run: |
+          TW_NO_PYTHON_BIN="$RUNNER_TEMP/traceweave-no-python-bin"
+          mkdir -m 700 "$TW_NO_PYTHON_BIN"
+          for utility in docker sh dirname basename mkdir chmod id; do
+            ln -s "$(command -v "$utility")" "$TW_NO_PYTHON_BIN/$utility"
+          done
+          printf 'TW_NO_PYTHON_BIN=%s\n' "$TW_NO_PYTHON_BIN" >> "$GITHUB_ENV"
+          export PATH="$TW_NO_PYTHON_BIN"
+          if command -v python3 || command -v python; then
+            echo 'The operator PATH must not contain host Python.' >&2
+            exit 1
+          fi
+          "$TW_TEST_PYTHON" -B tools/integration.py --release "$TW_CANDIDATE" \
+            --runtime "$PWD/runtime/tests_ci/anonymous" --port 18080
+      - name: Real HTTPS, SMTP and account lifecycle using the pulled images
+        id: https
+        working-directory: delivery
+        run: |
+          "$TW_TEST_PYTHON" -B tests/account_https.py --release "$TW_CANDIDATE" \
+            --test-root "$PWD/runtime/tests_ci" --runtime "$PWD/runtime/tests_ci/anonymous-accounts" \
+            --protocol "$PWD/runtime/tests_ci/anonymous-accounts.log"
+      - name: Stop only the marked synthetic HTTP installation and retain every volume
+        id: cleanup
+        if: always()
+        working-directory: delivery
+        run: |
+          python3 -B - <<'PY'
+          import json, os, pathlib, re, subprocess
+          runtime = pathlib.Path.cwd() / 'runtime/tests_ci/anonymous'
+          marker = runtime / 'synthetic-installation.json'
+          config_path = runtime / 'installation.json'
+          if marker.is_file() and config_path.is_file():
+              assert not runtime.is_symlink() and json.loads(marker.read_text()) == {'synthetic': True, 'email': 'docker-owner@example.test'}
+              config = json.loads(config_path.read_text())
+              assert config['origin'] == 'http://127.0.0.1:18080' and config['mode'] == 'local'
+              assert re.fullmatch(r'tw-[a-f0-9]{12}', config['installId'])
+              suffixes = dict(database='postgres', files='files', assets='assets', gatewayData='gateway-data', gatewayConfig='gateway-config')
+              assert set(config['volumes']) == set(suffixes)
+              for key, suffix in suffixes.items():
+                  extra = r'(?:-restore-[a-f0-9]{8})?' if key in ['database', 'files'] else ''
+                  assert re.fullmatch(re.escape(config['installId'] + '-' + suffix) + extra, config['volumes'][key]), 'Refusing a volume outside this synthetic installation.'
+              env = os.environ.copy()
+              env['TW_RUNTIME_DIR'] = str(runtime)
+              if env.get('TW_NO_PYTHON_BIN'): env['PATH'] = env['TW_NO_PYTHON_BIN']
+              subprocess.run(['/bin/sh', str(pathlib.Path.cwd()/'traceweave.sh'), 'stop'], env=env, check=True)
+          PY
+      - name: Write compact verification evidence
+        if: always()
+        env:
+          TW_PULL_OUTCOME: ${{ steps.pull.outcome }}
+          TW_HTTP_OUTCOME: ${{ steps.http.outcome }}
+          TW_HTTPS_OUTCOME: ${{ steps.https.outcome }}
+          TW_CLEANUP_OUTCOME: ${{ steps.cleanup.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          output = pathlib.Path(os.environ['RUNNER_TEMP'])/'traceweave-registry-evidence'
+          output.mkdir(mode=0o700, exist_ok=True)
+          pull_path = output/'pull.json'
+          evidence = json.loads(pull_path.read_text()) if pull_path.is_file() else dict(deliveryTag=os.environ['TW_DELIVERY_TAG'], nativePlatform='linux/'+os.environ['TW_ARCH'])
+          outcomes = {key: os.environ['TW_'+key.upper()+'_OUTCOME'] for key in ['pull', 'http', 'https', 'cleanup']}
+          evidence.update(checks=outcomes, conclusion='passed' if all(value == 'success' for value in outcomes.values()) else 'failed',
+              runURL=f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              operator='real traceweave.sh bootstrap and lifecycle via published tools; no host Python on operator PATH; absolute host Python is only the HTTP/PTY test driver',
+              data='isolated marked synthetic runtimes; cleanup retains every volume')
+          (output/'verification.json').write_text(json.dumps(evidence, indent=2)+'\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('Clean host linux/'+os.environ['TW_ARCH']+': '+evidence['conclusion']+'\n\n')
+              for key, result in outcomes.items(): out.write('- '+key+': '+result+'\n')
+              out.write('\nHTTP installation exercises the Docker-only operator path. HTTPS/account assertions use the host test harness. No private runtime logs, credentials or SMTP captures are uploaded.\n')
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: registry-verification-${{ matrix.arch }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/traceweave-registry-evidence/verification.json
+          retention-days: 90
+          if-no-files-found: error
