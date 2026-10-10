@@ -21,7 +21,7 @@
 3. Установить одинаковые publication workflows в backend/frontend; задать counterpart/delivery variables.
 4. Запустить полный выпуск из backend после готовности source access и immutable tags; проверить фактический результат. После успешной приёмки выпустить manifest/Release assets.
 
-## Preflight 2026-10-10
+## Исходный preflight 2026-10-10 (до настройки Secrets и immutable tags)
 
 - GitHub SSH и CLI доступны вне sandbox; admin/push права подтверждены во всех трёх repositories. Main локально совпадает с remote.
 - Backend/frontend приватные, поставка публичная. В обоих source repositories уже есть Secret DOCKERHUB_TOKEN и Variable DOCKERHUB_USERNAME=andreytorlopov. Других настроек пока нет.
@@ -41,7 +41,7 @@
 
 ## Первый этап: до настройки source access
 
-Подготовка и GitHub integration выполнены; Docker Hub publication ожидает SOURCE_REPOSITORIES_TOKEN.
+На этом историческом этапе подготовка и GitHub integration были выполнены; Docker Hub publication ожидала SOURCE_REPOSITORIES_TOKEN. Актуальный результат приведён в конце протокола.
 
 - В main поставки отправлен aa8543b (builder, CLI/tests/docs, private source checkout); v0.1.0 создан на этом commit.
 - В backend main отправлен 3b4882b, во frontend main — a0fa01d: одинаковые .github/workflows/dockerhub.yml, зарегистрированные GitHub как active. Их v0.1.0 закрепляют исходный принятый код до установки tag-trigger workflow: backend 3367a53, frontend b270b1c. Теги созданы и отправлены до workflows; ручной первый full_release строит именно их, номера версий не зависят от workflow commit.
@@ -51,16 +51,29 @@
 - После main push запустился [delivery CI 38071338668](https://github.com/andrey-torlopov/TraceWeave/actions/runs/38071338668): обе архитектуры failed на checkout приватного backend; до unit/build/integration не дошли. Это подтверждает отсутствие source-access Secret и не является дефектом Docker Hub PAT. После настройки Secret этот run можно rerun; полный publication run запускается отдельно из backend main.
 - Registry push, release Docker builds, anonymous pulls, registry-digest manifest/stable promotion и чистый bootstrap — not_run до готовности source access. GitHub Release assets не создавались; существующие Git tags не переносятся. Рабочие установки, миграции, зависимости и БД не изменены.
 
-Команда первого выпуска после добавления Secret во все три repositories:
+Фактически выполненная команда первого выпуска после добавления Secret во все три repositories (не повторять для опубликованного v0.1.0):
 
 ```sh
 gh workflow run dockerhub.yml --repo andrey-torlopov/TraceWeaveBackend --ref main -f release_tag=v0.1.0 -f full_release=true
 ```
 
-Не запускайте обычный frontend v0.1.0 параллельно полному выпуску: полный выпуск публикует также frontend. Следующий компонент выпускается новым version tag. AC-65/66 подтверждены только в объёме подготовленного version/provenance workflow; реальная registry/runtime приёмка ещё не завершена.
+Не запускайте обычный frontend v0.1.0 параллельно полному выпуску: полный выпуск публикует также frontend. Следующий компонент выпускается новым version tag. На этом этапе AC-65/66 были подтверждены только в объёме подготовленного version/provenance workflow; результаты registry/runtime приёмки приведены ниже.
 
 ## Продолжение после настройки Source Secret
 
-Владелец создал SOURCE_REPOSITORIES_TOKEN и добавил его в три repositories. API подтвердил наличие имён (значения не читаются); checkout обоих приватных sources реально прошёл. Запущен [полный publication run 38072087934](https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38072087934) из backend main с release_tag=v0.1.0/full_release=true. Prepare, contract/unit/frontend checks прошли на обеих архитектурах; native Docker builds в работе.
+Владелец создал SOURCE_REPOSITORIES_TOKEN и добавил его в три repositories. API подтвердил наличие имён (значения не читаются); checkout обоих приватных sources реально прошёл. Запущен [полный publication run 38072087934](https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38072087934) из backend main с release_tag=v0.1.0/full_release=true. Все шесть jobs завершились success: prepare, validate amd64/arm64, publish-platform amd64/arm64 и publish-index. Native builds и contract/unit/frontend/API/media/export/restart/maintenance/restore/fault/account/SMTP/HTTPS проверки прошли. Опубликованы все четыре образа с архитектурными тегами и multiarch 0.1.0; artifact dockerhub-release-0.1.0 содержит candidate.json, tools-image.txt и publication.json.
 
-Добавлен отдельный workflow registry-verification.yml: только workflow_dispatch, полный candidate JSON и delivery tag, две свежие native VM, пустой DOCKER_CONFIG, anonymous pulls и проверка OCI/baked metadata/source/contract. HTTP integration использует Docker-only CLI с PATH без host Python; абсолютный host Python служит только HTTP/PTY test harness. HTTPS/SMTP/account lifecycle проверяется отдельно. Только помеченные synthetic runtimes, stop сохраняет volumes; в artifact попадает компактное evidence без приватных логов. Actionlint, bash syntax всех 7 run blocks и AST heredocs прошли; настоящий registry run возможен после получения публикационного artifact.
+Добавлен отдельный workflow registry-verification.yml: только workflow_dispatch, полный candidate JSON и delivery tag, две свежие native VM, пустой DOCKER_CONFIG, anonymous pulls и проверка OCI/baked metadata/source/contract. HTTP integration использует Docker-only CLI с PATH без host Python; абсолютный host Python служит только HTTP/PTY test harness. HTTPS/SMTP/account lifecycle проверяется отдельно. Только помеченные synthetic runtimes, stop сохраняет volumes; в artifact попадает компактное evidence без приватных логов. Actionlint, bash syntax всех 7 run blocks и AST heredocs прошли; после получения публикационного artifact запущен [registry run 38073642033](https://github.com/andrey-torlopov/TraceWeave/actions/runs/38073642033). Обе native jobs завершились success: анонимное скачивание всех пяти images, provenance/version checks, Docker-only bootstrap/lifecycle/backup/restore, HTTPS/SMTP/accounts и безопасный stop.
+
+## Проверка опубликованных тегов
+
+Анонимный Docker Hub API после publication success подтвердил Public, immutable_tags_settings={enabled:true,rules:[".*"]}, linux/amd64 + linux/arm64 и совпадение index digest с candidate.json для backend/frontend/gateway/tools. Исходные v0.1.0 не переносились. Установка из GitHub Release требует assets в releases/ — wrapper сохраняет доступ к опубликованному tools образу для следующих команд без host Python.
+
+## Итоговая приёмка и manifest promotion
+
+- Publication run 38072087934 — success для обеих native архитектур; registry run 38073642033 — success на двух отдельных свежих VM. Все checks pull/http/https/cleanup в скачанных verification.json — success; anonymousPull=true.
+- Перед promotion проверены sourceTags=v0.1.0 во всех трёх repositories, exact source commits против локальных peeled tags, совпадение четырёх registry index digest и tools-image.txt, native platforms и весь release/source/image состав acceptance evidence. Манифест принят строгим formatVersion=1 validator.
+- releases/0.1.0.json и releases/stable.json идентичны; releases/tools-image.txt содержит ровно images.tools и newline. Validation содержит оба фактических CI URLs. Publication evidence дополнен acceptance обеих архитектур и публикуется как GitHub Release asset.
+- AC-65/66 подтверждены в объёме версионированной Docker-поставки: тег → baked version/OCI → manifest/readiness, публичный immutable multiarch registry и новая установка через опубликованный tools-контейнер. Это не закрывает всю P0 acceptance и ручную проверку Safari/macOS; установка на VPS не выполнялась.
+- Новых зависимостей, API и миграций нет. Внутри CI использовались только отмеченные synthetic runtimes; пользовательские БД, volumes, установка и GitHub visibility не менялись.
+- Следующие релизы используют новый SemVer; 0.1.1 — patch, 0.2.0 — minor. Не переносить исходные v0.1.0 и не повторять publication существующих Docker tags.

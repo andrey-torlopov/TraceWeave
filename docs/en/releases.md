@@ -25,9 +25,9 @@ Backend metadata is `/app/backend-release.json`; frontend metadata is `/opt/trac
 
 ## Public Packaging
 
-Public application images have not been released. A future registry release must publish verified images for the declared architectures, check anonymous pulls, and produce immutable registry-digest manifests. Include the versioned manifest, `releases/stable.json` and `releases/tools-image.txt` with the matching tools digest; verify bootstrap on a clean host, including without host Python.
+The first public release `0.1.0` is published on Docker Hub as `andreytorlopov/traceweave-{backend,frontend,gateway,tools}:0.1.0` for `linux/amd64` and `linux/arm64`. Each source repository uses GitHub tag `v0.1.0`; the baked version is `0.1.0`. [Native validation and publication passed](https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38072087934); [fresh-host anonymous registry acceptance passed](https://github.com/andrey-torlopov/TraceWeave/actions/runs/38073642033), including Docker-only bootstrap/lifecycle and HTTPS/SMTP/accounts. The verified manifest is [releases/0.1.0.json](../../releases/0.1.0.json); [releases/stable.json](../../releases/stable.json) selects this release for a new installation, with [releases/tools-image.txt](../../releases/tools-image.txt) providing its tools digest. Matching assets and publication evidence are available in [GitHub Release v0.1.0](https://github.com/andrey-torlopov/TraceWeave/releases/tag/v0.1.0). All four image repositories are Public with immutable tags. Backend/frontend GitHub sources remain private.
 
-Source GitHub visibility is separate from registry visibility. The existing Docker delivery workflow builds/tests amd64 and arm64; it does not push images. Registry publishing requires its own workflow/action. Publishing does not update installed users automatically; repeat bootstrap uses their saved manifest.
+The delivery workflow builds/tests without pushing images; the separate Docker Hub workflow publishes the tested images. Publishing does not update installed users automatically; repeat bootstrap uses their saved manifest.
 
 ## Docker Hub Publication Settings
 
@@ -35,13 +35,29 @@ Backend/frontend contain `.github/workflows/dockerhub.yml`. A `vMAJOR.MINOR.PATC
 
 Both source repositories require Secrets `DOCKERHUB_TOKEN` (Docker Hub Read/Write PAT, already provided by the owner) and `SOURCE_REPOSITORIES_TOKEN` (GitHub fine-grained PAT with Contents: Read for the private backend/frontend repositories). Variables: `DOCKERHUB_USERNAME=andreytorlopov`, `TRACEWEAVE_DELIVERY_TAG=v0.1.0`, `TRACEWEAVE_COUNTERPART_TAG=v0.1.0`. The counterpart is frontend for a backend run and backend for a frontend run. **TraceWeave** requires only `SOURCE_REPOSITORIES_TOKEN` for integration CI; it does not need Docker Hub settings. The default `GITHUB_TOKEN` cannot read another private repository. [Private checkout documentation](https://github.com/actions/checkout#checkout-multiple-repos-private).
 
-All four `andreytorlopov/traceweave-{backend,frontend,gateway,tools}` Docker Hub repositories must be Public with **All tags are immutable**; the workflow checks this before building. Run the first full release manually from backend Actions with `release_tag=v0.1.0` and `full_release=true`, after the initial matching tags exist in all three GitHub repositories. Image availability and installable-manifest acceptance require separate evidence. [Current release protocol](../tasks/TW-E8-003-dockerhub-publication.md).
+All four `andreytorlopov/traceweave-{backend,frontend,gateway,tools}` Docker Hub repositories must be Public with **All tags are immutable**; the workflow checks this before building. The first full release has already run manually from backend Actions with `release_tag=v0.1.0` and `full_release=true`. Do not republish existing tags. The next full release needs a new matching version in all three GitHub repositories; a component-only release needs a new tag for that component. Image availability and installable-manifest acceptance require separate evidence. [Current release protocol](../tasks/TW-E8-003-dockerhub-publication.md).
 
 ## Old Tabs and Pending Requests
 
 Clients retain exact pending bytes, account, operation ID and contract. Maintenance keeps them available for explicit replay. Unsupported clients receive `client_upgrade_required`; account changes fence old work. Do not remove supported client hashes through ordinary update. Merely editing a JSON list does not implement backend compatibility.
 
 Before replacing frontend, the updater copies current hashed assets to the retained-assets volume. Current files take precedence; fallback serves only old `/assets/*`. HTML is not cached; hashed assets are immutable. Missing JS/CSS returns 404 rather than SPA HTML. Cleanup requires a separate compatibility decision; users choose reload after handling drafts.
+
+## New Installation of a Specific Version
+
+Use source tag `v0.1.0` and assets from the same [GitHub Release](https://github.com/andrey-torlopov/TraceWeave/releases/tag/v0.1.0), saved under `releases/`. The target directory must be new:
+
+```sh
+set -eu
+git clone --branch v0.1.0 --depth 1 https://github.com/andrey-torlopov/TraceWeave.git TraceWeave-0.1.0
+cd TraceWeave-0.1.0
+curl -fL --output releases/0.1.0.json https://github.com/andrey-torlopov/TraceWeave/releases/download/v0.1.0/0.1.0.json
+curl -fL --output releases/tools-image.txt https://github.com/andrey-torlopov/TraceWeave/releases/download/v0.1.0/tools-image.txt
+./bootstrap.sh --release "$PWD/releases/0.1.0.json"
+./traceweave.sh status
+```
+
+Git, curl, Docker and the Compose plugin are required; host Python is optional. The wrapper reads `releases/tools-image.txt` to run the published tools container. Its reference must match `images.tools`; retain this file for subsequent commands. Enter the initial account details in interactive bootstrap. A new installation uses the selected manifest; repeat bootstrap retains an existing installation's version.
 
 ## Update
 
