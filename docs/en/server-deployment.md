@@ -2,7 +2,7 @@
 
 *[Русский](../ru/server-deployment.md)*
 
-This guide is for a verified published release. Public application images and the public release manifest are not available yet; the current alternative is a [source build](quick-start.md). A local image ID cannot be pulled on a clean VPS.
+Release 0.1.0 is published for amd64/arm64. Use matching delivery files and manifest from [Releases](releases.md); private source access is unnecessary. Data will live on the VPS, whose operator/provider are within the [trust boundary](data-and-security.md).
 
 ## 1. Prepare SSH Access
 

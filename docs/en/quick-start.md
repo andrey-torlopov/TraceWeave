@@ -2,41 +2,30 @@
 
 *[Русский](../ru/quick-start.md)*
 
-## Build a Local Installation
+Install Docker with Linux containers, Docker Compose and Git; use an interactive terminal. Component source access and GitHub/Docker Hub accounts are unnecessary. Release 0.1.0 images are public for amd64 and arm64.
 
-Docker Engine/Desktop, Compose and a TTY are required. Clone the backend and frontend beside this delivery checkout:
+From the parent directory of a new installation:
 
 ```sh
 git clone https://github.com/andrey-torlopov/TraceWeave.git
-git clone https://github.com/andrey-torlopov/TraceWeaveBackend.git
-git clone https://github.com/andrey-torlopov/TraceWeaveFrontend.git
 cd TraceWeave
-printf 'New local release ID: '
-IFS= read -r TW_RELEASE_ID
-./traceweave.sh build-source --release-id "$TW_RELEASE_ID" \
-  --backend-path ../TraceWeaveBackend \
-  --frontend-path ../TraceWeaveFrontend
-./bootstrap.sh --release "releases/$TW_RELEASE_ID.local.json"
+./bootstrap.sh
 ./traceweave.sh status
 ```
 
-Start the cloning commands in the directory that will hold all three checkouts. If they already exist, start at `cd TraceWeave` from their parent directory. Backend/frontend must be clean and committed. Choose a new ID using letters, digits, dots, underscores or hyphens; the builder refuses to overwrite an existing local manifest.
+Bootstrap downloads pinned images, prepares storage and prompts for email, display name and a hidden password. Open **http://127.0.0.1:8080** and sign in. Create an investigation, two documents and a relation; reload after confirmed saving.
 
-Bootstrap prompts for email, display name and a hidden account password. Open **http://127.0.0.1:8080** and sign in. Create an investigation and two documents, add a relation, then reload to read confirmed data from the server. Local HTTP needs no SMTP or domain.
-
-## Subsequent Runs
+The `releases/` directory selects verified release 0.1.0. For an exact earlier delivery use [Releases](releases.md). Cloning current documentation does not change installed container versions.
 
 ```sh
 ./traceweave.sh stop
 ./bootstrap.sh
 ```
 
-Stopping keeps volumes and the installed release. Keep the same checkout/runtime. A local manifest records images on this Docker-host and cannot download application images on a different host.
+Stopping retains data and the installed release. Repeat bootstrap starts that installation. Preserve its runtime and Docker volumes. A new installation can use `./bootstrap.sh --port 18080` when the default port is occupied; its URL will be http://127.0.0.1:18080.
 
-## Published Delivery
-
-Public images have not been released yet. Once a verified package includes `releases/stable.json` and `releases/tools-image.txt`, a new installation uses `./bootstrap.sh` directly. See [Local Use](local-use.md), [Installation](installation.md) and [Server Deployment](server-deployment.md).
+[Where data lives and what leaves the host](data-and-security.md) · [Installation](installation.md) · [VPS](server-deployment.md)
 
 ---
 
-[Back to documentation](index.md) · [README](../../README.md)
+[Documentation](index.md) · [README](../../README.md)

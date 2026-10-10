@@ -1,33 +1,31 @@
-# Установка TraceWeave
-
-Руководство перенесено в языковые каталоги:
+# TraceWeave: installation
 
 - [Русский](ru/installation.md)
 - [English](en/installation.md)
-- [Индекс документации](ru/index.md)
+- [Документация](ru/index.md)
 
-Старые ссылки на разделы сохранены ниже.
+Старые адреса разделов ведут к актуальным пользовательским инструкциям.
 
 <a id="состав-и-предварительные-условия"></a>
 
-- [Состав и предварительные условия](ru/installation.md#состав-и-предварительные-условия)
+- [Требования](ru/installation.md)
 
 <a id="cli-с-python-и-без-python"></a>
 
-- [CLI с Python и без Python](ru/installation.md#cli-с-python-и-без-python)
+- [Runtime и CLI](ru/installation.md#runtime-и-cli)
 
 <a id="первый-локальный-запуск"></a>
 
-- [Первый локальный запуск](ru/installation.md#первый-локальный-запуск)
+- [Первый запуск](ru/quick-start.md)
 
 <a id="https-на-сервере"></a>
 
-- [HTTPS на сервере](ru/installation.md#https-на-сервере)
+- [HTTPS на сервере](ru/server-deployment.md)
 
 <a id="права-и-хранение-секретов"></a>
 
-- [Права и хранение секретов](ru/installation.md#права-и-хранение-секретов)
+- [Хранение и защита данных](ru/data-and-security.md)
 
 <a id="сборка-разработчиком"></a>
 
-- [Сборка разработчиком](ru/installation.md#сборка-разработчиком)
+- [Установка готового выпуска](ru/quick-start.md)

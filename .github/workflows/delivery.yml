@@ -55,6 +55,8 @@ jobs:
           path: .ci/frontend
           persist-credentials: false
       - name: Validate contract and operator failure cases
+        env:
+          TW_SPECIFICATION_PATH: .ci/backend/docs/project/TECHNICAL_SPECIFICATION.md
         run: |
           python3 -m venv .ci/venv
           .ci/venv/bin/pip install -r tools/requirements-validation.txt

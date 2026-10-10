@@ -2,31 +2,20 @@
 
 *[Русский](../ru/index.md)*
 
-Start with installation and the quick start, then use the architecture and contract references for development.
+User documentation covers published installation, your computer/server, data storage and recovery.
 
-## Getting Started
-
-- [Installation](installation.md)
 - [Quick Start](quick-start.md)
-
-## Core Concepts
-
-- [Key Features](features.md)
-- [Architecture Overview](architecture.md)
-
-## Reference and Operations
-
-- [API and Contracts](api.md)
+- [Installation](installation.md)
+- [Features](features.md)
+- [How It Works](architecture.md)
+- **[Data, External Connections and Protection Boundaries](data-and-security.md)**
 - [Local Use](local-use.md)
-- [Server Deployment](server-deployment.md)
-- [Operations and Recovery](operations.md)
+- [VPS Deployment](server-deployment.md)
+- [Operations and Backup/Restore](operations.md)
 - [Releases and Updates](releases.md)
-
-## Verification
-
-- [Testing and Known Limits](testing.md)
+- [Verification and Limits](testing.md)
 - [Changelog](../../CHANGELOG.md)
 
 ---
 
-[Back to documentation](index.md) · [README](../../README.md)
+[Documentation](index.md) · [README](../../README.md)

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Documentation boundary and banners — 2026-10-10
+
+- Use the TraceWeave illustration with distinct backend/frontend paper-card markers.
+- Keep user installation, operation and data/security guides public; centralize engineering requirements and protocols in private backend documentation.
+- Correct release 0.1.0 availability and link the full project from both private components.
+
 ### Documentation — 2026-10-10
 
 - Add English and Russian READMEs, language navigation and documentation indexes.

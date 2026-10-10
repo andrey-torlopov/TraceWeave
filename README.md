@@ -1,50 +1,43 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="TraceWeave Delivery" width="720"/>
+  <img src="docs/banner.png" alt="TraceWeave" width="960"/>
 </p>
-
-<p align="center"><strong>Docker Compose · Caddy · PostgreSQL 18</strong></p>
 
 # TraceWeave
 
-*Read this in other languages: [Русский](README-ru.md)*
+*[Русский](README-ru.md)*
 
-The installation and operations repository for TraceWeave. It connects the independent backend and frontend with PostgreSQL and a single public gateway.
+## Why This Project Exists
 
-## Key Features
+<p align="center">
+  <img src="docs/why-traceweave.png" alt="TraceWeave: it is all connected" width="560"/>
+</p>
 
-- **Local Docker installation and HTTPS server configuration.**
-- **Interactive bootstrap, account creation and persistent installation state.**
-- **Maintenance, compatible updates, offline backup and restore to new volumes.**
-- **Canonical OpenAPI, SQL, archive schemas, specification and accepted change requests.**
+When materials are scattered across files, tabs and notes, their connections are easy to lose. TraceWeave brings documents, sources and conclusions into one graph so an investigation can be understood, checked and continued.
+
+TraceWeave is a manual investigation application: documents, materials and connections on a graph. Run it on your computer or your own server; data stays on the host you choose.
 
 ## Quick Start
 
-Build from source using [Quick Start](docs/en/quick-start.md). For a published release containing `releases/stable.json`, run:
+Install and start Docker with Compose. From the parent directory of a new installation:
 
 ```sh
+git clone https://github.com/andrey-torlopov/TraceWeave.git
+cd TraceWeave
 ./bootstrap.sh
 ```
 
-Bootstrap prompts for email, name and a hidden password, then opens the installation at **http://127.0.0.1:8080**.
-
-**Status:** public container images have not been released yet. Source builds are available; full P0 acceptance remains separate.
+Enter email, display name and a hidden password. Open **http://127.0.0.1:8080**. Ready-made **0.1.0** images are public for amd64/arm64; private component sources and registry sign-in are unnecessary.
 
 ## Documentation
 
-- [Installation](docs/en/installation.md)
-- [Quick Start](docs/en/quick-start.md)
-- [Architecture](docs/en/architecture.md)
-- [API and Contracts](docs/en/api.md)
-- [Testing](docs/en/testing.md)
-- [Full Documentation](docs/en/index.md)
-- [Changelog](CHANGELOG.md)
+- [Installation and Requirements](docs/en/installation.md)
+- **[Where Data Lives, What Leaves the Host and Protection Boundaries](docs/en/data-and-security.md)**
+- [VPS Deployment](docs/en/server-deployment.md)
+- [Backup, Restore and Maintenance](docs/en/operations.md)
+- [Releases and Updates](docs/en/releases.md)
+- [Limits and Recorded Verification](docs/en/testing.md)
+- [All User Documentation](docs/en/index.md)
 
-## Project Repositories
+Confirmed documents and relations live in PostgreSQL; originals use a separate volume. The browser keeps additional drafts. TraceWeave connects no telemetry, LLM or automatic external collection. The application does not encrypt data at rest: the host operator and administrators can access it.
 
-| Repository | Responsibility |
-| --- | --- |
-| [TraceWeaveBackend](https://github.com/andrey-torlopov/TraceWeaveBackend) | API, domain validation, PostgreSQL, immutable files and export jobs |
-| [TraceWeaveFrontend](https://github.com/andrey-torlopov/TraceWeaveFrontend) | Browser application, graph, editors and local draft recovery |
-| [TraceWeave](https://github.com/andrey-torlopov/TraceWeave) | Compose, gateway, operator CLI, canonical contracts and specification |
-
-The specification and machine contracts live only in the delivery repository. Component documentation explains the implementation without maintaining another specification.
+[GitHub Release v0.1.0](https://github.com/andrey-torlopov/TraceWeave/releases/tag/v0.1.0) · [Changelog](CHANGELOG.md)

@@ -1,41 +1,15 @@
-# Testing and Acceptance
+# Verification and Limits
 
 *[Русский](../ru/testing.md)*
 
-## Local Contract and Operator Checks
+Release 0.1.0 is published for Linux amd64/arm64. Recorded [fresh native host acceptance](https://github.com/andrey-torlopov/TraceWeave/actions/runs/38073642033) covers anonymous pulls, Docker-only bootstrap, persistence after restart, backup/restore, HTTPS and account workflows. See the [release evidence](https://github.com/andrey-torlopov/TraceWeave/releases/tag/v0.1.0).
 
-The existing CI installs pinned validation dependencies, validates contracts and runs isolated operator tests before image builds. Reproduce its non-container checks with a disposable virtual environment:
+After installation, run `./traceweave.sh status`, sign in, create a **test** investigation/document, wait for confirmed saving and reload. Test restore on a separate synthetic installation, not the only copy of real research.
 
-```sh
-TW_CHECK_VENV=$(mktemp -d "${TMPDIR:-/tmp}/traceweave-checks.XXXXXX")
-python3 -m venv "$TW_CHECK_VENV"
-"$TW_CHECK_VENV/bin/pip" install -r tools/requirements-validation.txt
-"$TW_CHECK_VENV/bin/python" tools/validate_contracts.py
-"$TW_CHECK_VENV/bin/python" -m unittest discover -s tests -v
-"$TW_CHECK_VENV/bin/python" -m unittest discover -s tests/contracts -p test_contracts.py -v
-python3 -I tools/ci_release_tests.py --self-test
-sh -n bootstrap.sh traceweave.sh db/entrypoint.sh db/init.sh
-```
+Container publication is not complete product acceptance or an independent security audit. The full browser/performance matrix, manual Safari and some planned capabilities need separate verification. Headless WebKit is not manual Safari evidence.
 
-These checks do not migrate the application database. Real lifecycle tests are separate and create data; only point them at marked synthetic installations.
-
-## Full Delivery Checks
-
-[Docker delivery CI](../../.github/workflows/delivery.yml) checks locked independent source revisions on Linux amd64 and arm64. It builds images, then exercises real API/media/export/restart/maintenance/restore, selective updates, marked fault recovery, account isolation, SMTP and HTTPS. It does not publish images.
-
-| Runner | Scope |
-| --- | --- |
-| `tools/integration.py` | Synthetic installation and API lifecycle |
-| `tools/update_integration.py` | Frontend-only/backend-only transitions |
-| `tools/fault_integration.py` | Marked synthetic failure/recovery cases |
-| `tests/account_https.py` | Account/mail/HTTPS acceptance fixtures |
-
-Use each runner's `--help` and required marked test root; preserve its evidence. Running a component unit suite or generating documentation is not equivalent to this protocol.
-
-## Acceptance Boundary
-
-E0/E1 and the scoped local Docker package have recorded acceptance separately. Full P0 remains separate, including unresolved [extensions 16 KiB](../change-requests/CR-E2-001-extensions-byte-limit.md), browser/performance checks and all applicable AC. Real Safari requires its own manual evidence; headless WebKit is insufficient. Never relabel historical or skipped checks as current passes.
+A local draft does not guarantee the last keystroke survives a crash. Media support depends on browser codecs. The application does not encrypt the database, originals or backups at rest. See [trust boundaries](data-and-security.md).
 
 ---
 
-[Back to documentation](index.md) · [README](../../README.md)
+[Documentation](index.md) · [README](../../README.md)

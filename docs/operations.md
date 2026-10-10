@@ -1,33 +1,23 @@
-# Управление установкой
-
-Руководство перенесено в языковые каталоги:
+# TraceWeave: operations
 
 - [Русский](ru/operations.md)
 - [English](en/operations.md)
-- [Индекс документации](ru/index.md)
+- [Документация](ru/index.md)
 
-Старые ссылки на разделы сохранены ниже.
+Старые адреса разделов ведут к актуальным пользовательским инструкциям.
 
 <a id="основные-команды"></a>
 
-- [Основные команды](ru/operations.md#основные-команды)
-
-<a id="обслуживание-и-остановка"></a>
-
-- [Обслуживание и остановка](ru/operations.md#обслуживание-и-остановка)
-
-<a id="аккаунты"></a>
-
-- [Аккаунты](ru/operations.md#аккаунты)
+- [Команды](ru/operations.md#ежедневные-команды)
 
 <a id="приватный-offline-backup"></a>
 
-- [Приватный offline backup](ru/operations.md#приватный-offline-backup)
+- [Backup](ru/operations.md#приватный-backup)
 
 <a id="restore-в-новые-volumes"></a>
 
-- [Restore в новые volumes](ru/operations.md#restore-в-новые-volumes)
+- [Restore](ru/operations.md#restore-в-новые-хранилища)
 
 <a id="прерванная-операция"></a>
 
-- [Прерванная операция](ru/operations.md#прерванная-операция)
+- [Прерванная операция](ru/operations.md#если-операция-прервалась)

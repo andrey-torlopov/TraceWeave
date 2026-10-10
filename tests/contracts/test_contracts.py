@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -9,6 +10,7 @@ import tempfile
 import unittest
 
 ROOT=Path(__file__).resolve().parents[2]
+SPECIFICATION=Path(os.environ.get('TW_SPECIFICATION_PATH', str(ROOT.parent/'TraceWeaveBackend/docs/project/TECHNICAL_SPECIFICATION.md')))
 sys.path.insert(0,str(ROOT/'tools'))
 from validate_contracts import (load_contracts, schema_validator, archive_validator, strict_json,
                                validate_project, validate_archive_directory, validate_contracts)
@@ -42,13 +44,13 @@ class ContractTests(unittest.TestCase):
     def test_all_schemas_openapi_and_examples(self):
         result=validate_contracts();self.assertEqual(result['commandKinds'],35);self.assertEqual(result['operations'],47)
     def test_command_catalog_matches_spec(self):
-        spec=(ROOT/'docs/TECHNICAL_SPECIFICATION.md').read_text()
+        spec=SPECIFICATION.read_text()
         section=spec.split('### 14.5. Каталог команд P0')[1].split('### 14.6.')[0]
         expected=set(re.findall(r'^\| `([a-zA-Z]+\.[a-zA-Z]+)`',section,re.M))
         actual=set(API['components']['schemas']['Command']['discriminator']['mapping'])
         self.assertEqual(actual,expected)
     def test_routes_match_spec(self):
-        spec=(ROOT/'docs/TECHNICAL_SPECIFICATION.md').read_text().split('### 14.3. Маршруты P0')[1].split('### 14.4.')[0]
+        spec=SPECIFICATION.read_text().split('### 14.3. Маршруты P0')[1].split('### 14.4.')[0]
         expected=set()
         for methods,path in re.findall(r'^\| `([A-Z, ]+) ([^`]+)`',spec,re.M):
             for method in methods.split(', '):expected.add((method.lower(),path))
