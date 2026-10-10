@@ -13,6 +13,7 @@ from pathlib import Path
 import platform
 import re
 import secrets
+import shlex
 import shutil
 import socket
 import subprocess
@@ -290,11 +291,82 @@ def bootstrap_text(value,prompt,flag):
             print('Введите непустое значение.')
     except EOFError:raise Failure('Ввод первого аккаунта прерван. Повторите bootstrap в терминале.') from None
 
-def bootstrap(a):
+def stable_version(value):
+    if not isinstance(value,str) or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)',value):return None
+    return tuple(int(part) for part in value.split('.'))
+
+def bootstrap_update(old,path):
+    """Discover only a local, newer stable application pair and a valid update."""
+    target=manifest(path)
+    keys=['backendVersion','frontendVersion']
+    before=[stable_version(old[key]) for key in keys];after=[stable_version(target[key]) for key in keys]
+    if not all(before+after) or not stable_version(old['releaseId']) or not stable_version(target['releaseId']):
+        return None
+    if stable_version(target['releaseId'])<stable_version(old['releaseId']) or any(
+            new<previous for previous,new in zip(before,after)) or before==after:return None
+    try:validate_update(old,target)
+    except Failure:
+        selected_path=path.parent/(target['releaseId']+'-update.json')
+        if not selected_path.exists():selected_path=ROOT/'releases'/(target['releaseId']+'-update.json')
+        selected=manifest(selected_path)
+        fields=['formatVersion','releaseId','frontendReleaseId','frontendVersion','backendVersion',
+                'contractHash','backendContractHash','supportedClientContractHashes','migrations','postgresMajor','platforms']
+        if any(selected.get(key)!=target.get(key) for key in fields) or any(
+                selected['images'][key]!=target['images'][key] for key in ['backend','frontend']):
+            raise Failure('Compatible manifest does not match the selected application release.')
+        for key in ['backend','frontend','backendDiffHash','frontendDiffHash']:
+            if selected.get('source',{}).get(key)!=target.get('source',{}).get(key):
+                raise Failure('Compatible manifest does not match the selected application source.')
+        validate_update(old,selected)
+        return selected_path,selected
+    return path,target
+
+def bootstrap_existing(a,old,state):
+    print('Установлено: backend '+old['backendVersion']+', frontend '+old['frontendVersion']+'.')
+    if not isinstance(state,dict) or state.get('phase') not in ['ready','stopped']:
+        raise Failure('Установка содержит незавершённую операцию. Обновление и повторная миграция не запущены; '
+                      'прочитайте status и используйте resume/rollback или восстановление по docs/ru/operations.md.')
+    path=Path(a.release).resolve()
+    try:discovered=bootstrap_update(old,path)
+    except (Failure,OSError,ValueError,KeyError,TypeError,AttributeError):
+        print('Локальный manifest обновления отсутствует, повреждён или несовместим. Запускаю установленный выпуск.')
+        start();return
+    if discovered is None:
+        print('Более новая совместимая пара приложений не выбрана. Запускаю установленный выпуск.')
+        start();return
+    selected_path,selected=discovered
+    print('Доступно обновление: backend '+selected['backendVersion']+', frontend '+selected['frontendVersion']+'.')
+    if 'backend' in changes(old,selected):
+        print('Перед обновлением будет создана и проверена резервная копия базы и оригиналов.')
+    if selected['migrations']==old['migrations']:
+        print('Изменений схемы базы нет; миграции не нужны. Данные и вход в аккаунт сохраняются.')
+    else:
+        print('После резервной копии схема базы обновится автоматически. Для возврата прежней схемы потребуется '
+              'восстановление копии; данные и вход в аккаунт сохраняются.')
+    accepted=a.yes
+    if not accepted and sys.stdin.isatty():
+        try:accepted=input('Обновить сейчас? [y/N]: ').strip().casefold() in ['y','yes','д','да']
+        except EOFError:accepted=False
+    if not accepted:
+        print('Обновление отложено. Для обновления этой установки выполните:\n'+
+              'TW_RUNTIME_DIR='+shlex.quote(str(RUNTIME))+' '+shlex.quote(str(ROOT/'traceweave.sh'))+
+              ' update --release '+shlex.quote(str(selected_path)))
+        start();return
+    selected_args=argparse.Namespace(**vars(a));selected_args.release=str(selected_path);selected_args.yes=True
+    update_command(selected_args,reviewed_release=selected,start_stopped=state['phase']=='stopped')
+
+def bootstrap(a,resuming=False):
     if (RUNTIME/'installation.json').exists():
         config=load_config();release=current()
         if config['origin']!=a.origin and a.origin!='http://127.0.0.1:8080':raise Failure('Existing installation origin is fixed; use a separate runtime for another installation.')
+        state=read_json(RUNTIME/'operation.json')
+        if not resuming:bootstrap_existing(a,release,state);return
+        if not isinstance(state,dict) or state.get('phase') not in [
+                'bootstrap-preparing','bootstrap-migrating','bootstrap-owner','bootstrap-verifying']:
+            raise Failure('Unknown interrupted bootstrap phase; preserve runtime and use recovery.')
     else:
+        if (RUNTIME/'operation.json').exists():
+            raise Failure('Installation configuration is incomplete. Preserve runtime and use recovery before bootstrap.')
         if Path(a.release)==ROOT/'releases/stable.json' and not Path(a.release).is_file():
             raise Failure('Готовый релиз ещё не установлен: releases/stable.json отсутствует. '
                           'Образы TraceWeave необходимо опубликовать вместе с этим манифестом. '
@@ -311,9 +383,7 @@ def bootstrap(a):
         config={'installId':install,'origin':a.origin,'port':port,'mode':mode,'subnet':'172.28.'+str(octet)+'.0/24','gatewayIP':'172.28.'+str(octet)+'.2','registrationEnabled':False,'volumes':{key:install+'-'+suffix for key,suffix in [('database','postgres'),('files','files'),('assets','assets'),('gatewayData','gateway-data'),('gatewayConfig','gateway-config')]}}
         config['dynamicIPRange']='172.28.'+str(octet)+'.128/25'
         write_json(RUNTIME/'installation.json',config);write_json(RUNTIME/'release.json',release)
-    if (RUNTIME/'operation.json').exists() and read_json(RUNTIME/'operation.json')['phase'] in ['ready','stopped']:
-        start();return
-    ensure_images(release);phase('bootstrap-preparing')
+    phase('bootstrap-preparing');ensure_images(release)
     for volume in config['volumes'].values():execute(['docker','volume','create','--label','traceweave.installation='+config['installId'],volume],capture=True)
     # No service is exposed until all private settings/permissions exist.
     initialize_volumes(config,release)
@@ -408,8 +478,13 @@ def install_update(config,old,new,backup=None):
     write_json(RUNTIME/'previous-release.json',old);write_json(RUNTIME/'release.json',new)
     reload_gateway(config,new,False);phase('ready',releaseId=new['releaseId'],backup=backup);print('Installed '+new['releaseId'])
 
-def update_command(a):
-    config=load_config();old=current();new=manifest(Path(a.release).resolve());validate_update(old,new);ensure_images(new)
+def update_command(a,reviewed_release=None,start_stopped=False):
+    config=load_config();old=current();new=manifest(Path(a.release).resolve())
+    if reviewed_release is not None and new!=reviewed_release:
+        raise Failure('Выбранный manifest изменился во время подтверждения. Повторите bootstrap для проверки нового выпуска.')
+    validate_update(old,new)
+    if start_stopped:start()
+    ensure_images(new)
     changed=changes(old,new)
     if not changed:print('Selected release already installed.');return
     print(json.dumps({'current':old['releaseId'],'target':new['releaseId'],'changed':changed,'schemaChanged':old['migrations']!=new['migrations'],'rollback':'image rollback' if old['migrations']==new['migrations'] else 'restore into new volumes'},ensure_ascii=False))
@@ -453,7 +528,7 @@ def resume(a):
     state=read_json(RUNTIME/'operation.json');name=state['phase']
     if name=='stopped-interrupted':
         state=state['previousOperation'];write_json(RUNTIME/'operation.json',state);name=state['phase']
-    if name.startswith('bootstrap-'):bootstrap(a);return
+    if name.startswith('bootstrap-'):bootstrap(a,resuming=True);return
     if name.startswith('update-'):
         confirm('Продолжить прерванное обновление под заглушкой?',a.yes)
         config=load_config();old=manifest(RUNTIME/'update-source.json');target=manifest(RUNTIME/'pending-release.json')

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify published 0.1.0 -> 0.1.1 and rollback using the unmodified 0.1.0 operator.
+"""Verify published updates with the original operator and guided bootstrap.
 
 Only fresh, marked synthetic installations are accepted. Public artifacts contain
 image/source provenance and check outcomes; private runtime logs stay on the host.
@@ -29,6 +29,17 @@ EMPTY_HASH = hashlib.sha256(b'').hexdigest()
 PLATFORMS = ['linux/amd64', 'linux/arm64']
 LIMIT = 60000
 require = integration.require
+EXPECTED_CHECKS = {
+    'anonymous_native_provenance',
+    'published_0_1_0_bootstrap',
+    'upgrade_data_session_database_assets_backup',
+    'pre_update_pending_exact_replay_and_new_edit',
+    'current_node_deletion_regression',
+    'rollback_preserves_new_data_session_database',
+    'guided_bootstrap_update',
+    'guided_bootstrap_rollback',
+    'marked_cleanup_retains_volumes',
+}
 
 
 def strict(raw):
@@ -84,6 +95,25 @@ def compatible_manifest(base, candidate):
     require(set(control.changes(base, result)) == {'backend', 'frontend'},
             'Exactly backend and frontend must change.')
     return result
+
+
+def operational_metadata(value):
+    result = copy.deepcopy(value)
+    # Accepted native evidence may enrich prose without changing the selected
+    # images, source provenance, schema history or client compatibility.
+    result.pop('validation', None)
+    return result
+
+
+def guided_manifest(base, candidate, selected, stable, checked_update):
+    published_manifest(stable, '0.1.1')
+    control.validate_manifest(checked_update)
+    control.validate_update(base, checked_update)
+    require(operational_metadata(stable) == operational_metadata(candidate),
+            'Checked-in stable differs from the verified full publication.')
+    require(operational_metadata(checked_update) == operational_metadata(selected),
+            'Checked-in compatible update differs from the verified application pair or retained infrastructure.')
+    return checked_update
 
 
 def write_json(path, value):
@@ -179,6 +209,43 @@ def identities(operator, config, release):
     return result
 
 
+def guided_bootstrap(runtime):
+    require(integration.ROOT == ROOT and Path.cwd() == ROOT,
+            'Guided bootstrap must use the current harness checkout.')
+    require(shutil.which('python3') is None and shutil.which('python') is None,
+            'Host Python leaked onto guided bootstrap PATH.')
+    require(os.environ['TW_RUNTIME_DIR'] == str(runtime), 'Guided bootstrap runtime differs.')
+    log = runtime / ('integration-guided-bootstrap-' + integration.uid() + '.log')
+    fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as output:
+        result = subprocess.run([str(ROOT / 'bootstrap.sh'), '--yes'], cwd=ROOT,
+                                stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT)
+    require(result.returncode == 0, 'Guided bootstrap failed. Inspect private ' + str(log))
+    return log.read_text()
+
+
+def original_assets(owner, snapshots):
+    result = {}
+    for identifier, graph in snapshots.items():
+        path = '/api/v1/investigations/' + identifier
+        active_nodes = {node['id'] for node in graph['nodes']}
+        assets = owner.json('GET', path + '/assets')
+        require(assets['nextCursor'] is None, 'Synthetic asset fixture unexpectedly exceeds one complete page.')
+        for asset in assets['items']:
+            document = owner.json('GET', path + '/assets/' + asset['id'])
+            original = owner.request('GET', path + '/assets/' + asset['id'] + '/content')[0]
+            metadata = {key: value for key, value in document.items() if key != 'revision'}
+            # Version 0.1.0 exposes usages on trashed nodes; 0.1.1 filters them.
+            # Compare immutable metadata and surviving usages against the active
+            # graph while the SQL check compares every deleted node/relation row.
+            metadata['attachments'] = [item for item in document['attachments'] if item['nodeId'] in active_nodes]
+            result[(identifier, asset['id'])] = {
+                'document': metadata,
+                'sha256': hashlib.sha256(original).hexdigest(),
+            }
+    return result
+
+
 def seed(owner):
     inv = owner.create('Published update persistence ' + integration.uid())
     path = '/api/v1/investigations/' + inv['id']
@@ -267,9 +334,17 @@ def verify(args, evidence):
     with urlopen(BASE_URL, timeout=30) as response:
         base = published_manifest(strict(response.read(LIMIT + 1)), '0.1.0')
     selected = compatible_manifest(base, candidate)
+    checked_update = guided_manifest(base, candidate, selected,
+        strict((ROOT / 'releases/stable.json').read_bytes()),
+        strict((ROOT / 'releases/0.1.1-update.json').read_bytes()))
     contract = hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest()
     require(contract == base['contractHash'] == selected['contractHash'], 'Harness differs from the published client contract.')
     evidence.update(source={'base': base['source'], 'candidate': candidate['source'], 'compatible': selected['source']})
+    evidence['guidedOperator'] = {
+        'sourceRevision': command('git', '-C', str(ROOT), 'rev-parse', 'HEAD'),
+        'entrypoint': 'bootstrap.sh --yes', 'toolsImage': base['images']['tools'],
+        'hostPythonOnOperatorPath': False,
+    }
     evidence['activeCheck'] = 'anonymous_native_provenance'
     evidence['images'] = pull_and_inspect(base, selected, args.arch)
     evidence['checks']['anonymous_native_provenance'] = 'passed'
@@ -352,6 +427,105 @@ def verify(args, evidence):
                 'Rollback lost stored node/relation tombstones written after upgrade.')
         require(owner.json('GET', '/release.json')['releaseId'] == '0.1.0', 'Rollback gateway metadata differs.')
         evidence['checks']['rollback_preserves_new_data_session_database'] = 'passed'
+
+        # The preceding cycle remains entirely on the unmodified 0.1.0
+        # operator. Now exercise the checked-out guided entrypoint while its
+        # Python interpreter and ops dependency still come from tools:0.1.0.
+        evidence['activeCheck'] = 'guided_bootstrap_update'
+        originals = original_assets(owner, snapshots)
+        guided_prepared = prepare_batch(owner, path, 'guided bootstrap 0.1.1')
+        backups_before = set((runtime / 'backups').iterdir())
+        legacy_root = integration.ROOT
+        try:
+            integration.ROOT = ROOT
+            os.chdir(ROOT)
+            require(os.environ['TW_TOOLS_IMAGE'] == base['images']['tools'],
+                    'Guided bootstrap must retain the published 0.1.0 tools image.')
+            guided_bootstrap(runtime)
+            guided_selected = operator.current()
+            require(guided_selected == checked_update and operator.load_config() == config,
+                    'Guided bootstrap did not select the checked-in compatible update or changed installation configuration.')
+            guided_running = identities(operator, config, guided_selected)
+            require(guided_running['db'] == rolled_back['db'] and guided_running['gateway'] == rolled_back['gateway'],
+                    'Guided bootstrap restarted the database or gateway.')
+            require(all(guided_running[key][0] != rolled_back[key][0] for key in ['backend', 'frontend']),
+                    'Guided bootstrap did not replace both application containers.')
+            preserved(owner, fixture, cookie, csrf, account)
+            require(original_assets(owner, snapshots) == originals,
+                    'Guided bootstrap changed an existing original, asset metadata or surviving attachment usage.')
+            require(owner.request('GET', entry.group(1))[0] == old_asset,
+                    'Guided bootstrap lost the original pending client asset.')
+            require(owner.json('GET', '/release.json')['releaseId'] == '0.1.1',
+                    'Guided bootstrap gateway metadata differs.')
+            for identifier, snapshot in snapshots.items():
+                require(owner.json('GET', '/api/v1/investigations/' + identifier + '/graph') == snapshot,
+                        'Guided bootstrap changed existing active graph data.')
+            require(tombstones(operator, config, guided_selected) == deleted,
+                    'Guided bootstrap changed stored node/relation tombstones.')
+            guided_state = operator.read_json(runtime / 'operation.json')
+            require(guided_state['phase'] == 'ready' and guided_state.get('backup'),
+                    'Guided bootstrap did not finish with an offline backup.')
+            guided_backup = operator.read_json(runtime / 'backups' / guided_state['backup'] / 'manifest.json')
+            require(guided_backup['release'] == base and guided_backup['migrations'] == base['migrations'],
+                    'Guided bootstrap backup is not the preceding 0.1.0 installation.')
+            require(set((runtime / 'backups').iterdir()) > backups_before,
+                    'Guided bootstrap did not create a new offline backup.')
+            original_hashes = {value['sha256'] for value in originals.values()}
+            require(original_hashes <= {item['sha256'] for item in guided_backup['databaseOriginals']},
+                    'Guided bootstrap offline backup is missing an existing original.')
+            operator.compose('run', '--rm', '-T', '--no-deps', 'ops', 'verify-backup', guided_state['backup'],
+                             config=config, release=guided_selected, capture=True)
+            guided_newer = apply_prepared_and_edit(owner, path, guided_prepared)
+            guided_snapshots = {identifier: owner.json('GET', '/api/v1/investigations/' + identifier + '/graph')
+                                for identifier in snapshots}
+            backups_after = set((runtime / 'backups').iterdir())
+            repeated_output = guided_bootstrap(runtime)
+            require('Доступно обновление:' not in repeated_output and 'Обновить сейчас?' not in repeated_output,
+                    'Repeated guided bootstrap offered an already installed update.')
+            require(operator.current() == guided_selected and operator.load_config() == config,
+                    'Repeated guided bootstrap changed the already selected release or configuration.')
+            require(identities(operator, config, guided_selected) == guided_running,
+                    'Repeated guided bootstrap recreated or restarted an already running service.')
+            require(set((runtime / 'backups').iterdir()) == backups_after,
+                    'Repeated guided bootstrap unexpectedly created another update backup.')
+            preserved(owner, fixture, cookie, csrf, account)
+            require(original_assets(owner, guided_snapshots) == originals,
+                    'Repeated guided bootstrap changed existing originals or asset metadata.')
+            require(owner.request('GET', entry.group(1))[0] == old_asset,
+                    'Repeated guided bootstrap lost the original pending client asset.')
+            for identifier, snapshot in guided_snapshots.items():
+                require(owner.json('GET', '/api/v1/investigations/' + identifier + '/graph') == snapshot,
+                        'Repeated guided bootstrap changed post-update graph data.')
+            require(tombstones(operator, config, guided_selected) == deleted,
+                    'Repeated guided bootstrap changed stored node/relation tombstones.')
+            evidence['checks']['guided_bootstrap_update'] = 'passed'
+        finally:
+            integration.ROOT = legacy_root
+            os.chdir(legacy_root)
+
+        evidence['activeCheck'] = 'guided_bootstrap_rollback'
+        integration.cli(runtime, 'rollback', '--yes')
+        require(operator.current() == base and operator.load_config() == config,
+                'Original 0.1.0 operator did not roll back the guided application update.')
+        guided_rollback = identities(operator, config, base)
+        require(guided_rollback['db'] == rolled_back['db'] and guided_rollback['gateway'] == rolled_back['gateway'],
+                'Guided update rollback restarted the database or gateway.')
+        preserved(owner, fixture, cookie, csrf, account)
+        require(owner.json('GET', path + '/nodes/' + prepared.node_id)['node']['title'] == newer and
+                owner.json('GET', path + '/nodes/' + guided_prepared.node_id)['node']['title'] == guided_newer,
+                'Original operator rollback lost data written after either application update.')
+        for identifier, snapshot in guided_snapshots.items():
+            require(owner.json('GET', '/api/v1/investigations/' + identifier + '/graph') == snapshot,
+                    'Original operator rollback lost graph data written after guided bootstrap.')
+        require(tombstones(operator, config, base) == deleted,
+                'Original operator rollback lost stored node/relation tombstones after guided bootstrap.')
+        require(original_assets(owner, guided_snapshots) == originals,
+                'Original operator rollback changed immutable originals or asset metadata after guided bootstrap.')
+        require(owner.request('GET', entry.group(1))[0] == old_asset,
+                'Original operator rollback lost the original pending client asset after guided bootstrap.')
+        require(owner.json('GET', '/release.json')['releaseId'] == '0.1.0',
+                'Guided update rollback gateway metadata differs.')
+        evidence['checks']['guided_bootstrap_rollback'] = 'passed'
     finally:
         if operator is not None:
             try:
@@ -377,6 +551,58 @@ def self_test():
     require(base == original_base and candidate == original_candidate, 'Manifest builder modified its inputs.')
     require(result['source']['delivery'] == base['source']['delivery'], 'Mixed manifest lost delivery provenance.')
     require(all(result['images'][key] == base['images'][key] for key in ['gateway', 'tools', 'postgres']), 'Infrastructure changed.')
+    stable = copy.deepcopy(candidate)
+    stable['validation'] = 'Full publication with additional accepted evidence.'
+    checked_update = copy.deepcopy(result)
+    checked_update['validation'] = 'Compatible publication with additional accepted evidence.'
+    require(guided_manifest(base, candidate, result, stable, checked_update) == checked_update,
+            'Enriched validation prose changed guided operational selection.')
+    for mutate in [lambda value: value.update(releaseId='0.1.2'),
+                   lambda value: value['source'].update(delivery='0' * 40),
+                   lambda value: value['images'].update(frontend=base['images']['frontend'])]:
+        invalid = copy.deepcopy(checked_update)
+        mutate(invalid)
+        try:
+            guided_manifest(base, candidate, result, stable, invalid)
+        except (AssertionError, control.Failure):
+            continue
+        raise AssertionError('Operationally different guided update fixture was accepted.')
+    require(len(EXPECTED_CHECKS) == 9 and {'guided_bootstrap_update', 'guided_bootstrap_rollback'} <= EXPECTED_CHECKS,
+            'Native evidence does not require both guided bootstrap checks.')
+    class OriginalFixture:
+        def __init__(self, document, content=b'Synthetic immutable original.'):
+            self.document = document
+            self.content = content
+
+        def json(self, method, path):
+            require(method == 'GET', 'Asset self-test unexpectedly wrote data.')
+            return {'items': [{'id': 'asset'}], 'nextCursor': None} if path.endswith('/assets') else self.document
+
+        def request(self, method, path):
+            require(method == 'GET' and path.endswith('/content'), 'Unexpected asset self-test request.')
+            return self.content, {}
+
+    legacy_document = {'revision': 3, 'asset': {'id': 'asset', 'title': 'Retained original'},
+                       'attachments': [{'nodeId': 'active', 'caption': 'Surviving usage'},
+                                       {'nodeId': 'deleted', 'caption': 'Trash usage'}],
+                       'evidence': [], 'available': True, 'previewAllowed': False}
+    graph = {'investigation': {'nodes': [{'id': 'active'}]}}
+    before_asset = copy.deepcopy(legacy_document)
+    originals = original_assets(OriginalFixture(legacy_document), graph)
+    current_document = copy.deepcopy(legacy_document)
+    current_document['revision'] = 4
+    current_document['attachments'] = current_document['attachments'][:1]
+    require(legacy_document == before_asset and
+            original_assets(OriginalFixture(current_document), graph) == originals,
+            'Asset comparison modified data or treated the corrected active-usage projection as data loss.')
+    for mutate in [lambda value: value['asset'].update(title='Changed metadata'),
+                   lambda value: value['attachments'][0].update(caption='Changed surviving usage')]:
+        changed = copy.deepcopy(current_document)
+        mutate(changed)
+        require(original_assets(OriginalFixture(changed), graph) != originals,
+                'Asset comparison ignored changed metadata or surviving usage.')
+    require(original_assets(OriginalFixture(current_document, b'Changed original bytes.'), graph) != originals,
+            'Asset comparison ignored changed immutable original bytes.')
     mutations = [
         lambda value: value['migrations'][0].update(sha256='0' * 64),
         lambda value: value.update(contractHash='0' * 64, backendContractHash='0' * 64, supportedClientContractHashes=['0' * 64]),
@@ -394,7 +620,7 @@ def self_test():
         except (AssertionError, control.Failure):
             continue
         raise AssertionError('Unsafe published update fixture was accepted.')
-    print('PASS compatible published manifest construction and seven unsafe variants; no Docker/network execution.')
+    print('PASS compatible published manifests, guided selection with enriched validation prose, unsafe variants and required native checks; no Docker/network execution.')
 
 
 def main():
@@ -429,7 +655,7 @@ def main():
         evidence['runURL'] = 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID']
     try:
         verify(args, evidence)
-        require(len(evidence['checks']) == 7 and all(value == 'passed' for value in evidence['checks'].values()),
+        require(set(evidence['checks']) == EXPECTED_CHECKS and all(value == 'passed' for value in evidence['checks'].values()),
                 'Published update verification is incomplete.')
         evidence['conclusion'] = 'passed'
         evidence.pop('activeCheck', None)

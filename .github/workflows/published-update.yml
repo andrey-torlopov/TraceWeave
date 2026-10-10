@@ -62,7 +62,7 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/published-update-venv"
           "$RUNNER_TEMP/published-update-venv/bin/pip" install -r tools/requirements-validation.txt
           "$RUNNER_TEMP/published-update-venv/bin/python" -B tools/published_update_test.py --self-test
-      - name: Real anonymous native upgrade and image rollback using the old operator
+      - name: Real anonymous native legacy update and guided bootstrap with rollback
         working-directory: harness
         run: |
           "$RUNNER_TEMP/published-update-venv/bin/python" -B tools/published_update_test.py \

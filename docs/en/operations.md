@@ -42,7 +42,7 @@ Restore asks for confirmation, creates a safety backup of current state and new 
 
 ## Interrupted Operations
 
-Read `status` and logs first, fix the cause and retain maintenance. Repeat bootstrap with the same runtime and selected release. Supported update/backup/restart phases use `resume`; interrupted restore refuses automatic resume. `./traceweave.sh restore-revert` returns to saved previous volumes/release while retaining the restore candidate.
+Read `status` and logs first, fix the cause and retain maintenance. Bootstrap detects an incomplete operation and does not start another installation or update over it. Supported update/backup/restart phases use `resume`; interrupted restore refuses automatic resume. `./traceweave.sh restore-revert` returns to saved previous volumes/release while retaining the restore candidate.
 
 Use [Releases](releases.md) for updates/rollback. Do not launch a second competing operation or substitute volume deletion/raw `docker compose down` for recovery. If the CLI refuses an operation, preserve its state and diagnostic messages for investigation.
 

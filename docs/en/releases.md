@@ -20,6 +20,19 @@ Delivery files must match their release manifest. Images are pinned by content d
 
 ## Updating an Existing Installation
 
+For an installation following main, use its original directory and runtime:
+
+```sh
+git pull --ff-only
+./bootstrap.sh
+```
+
+The current script displays backend/frontend versions and offers a newer compatible release from local manifests. Confirmation runs the normal update: compatibility checks, pinned image downloads, offline backup, required migrations and readiness checks. Moving from 0.1.0 to 0.1.1 needs no migrations; the script selects the separate compatible manifest. Declining, end of input or a non-interactive terminal keeps the installed release. Use `./bootstrap.sh --yes` for an explicitly approved automated update.
+
+Bootstrap does not automatically downgrade. An interrupted operation directs you to `resume`/recovery; an incompatible candidate is not applied. Updating the Git directory and approving installation are separate actions: `git pull` alone does not replace containers.
+
+For a historical script kept at its original tag, use the explicit command below.
+
 To upgrade **0.1.0**, retain its delivery directory and runtime. Use the separate [update manifest](../../releases/0.1.1-update.json): it selects backend/frontend 0.1.1 and retains gateway/tools 0.1.0 and the existing PostgreSQL18.6 image. The full `0.1.1.json` is for a new installation; the existing operator refuses gateway/tools changes through ordinary update.
 
 From the installed 0.1.0 directory:

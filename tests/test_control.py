@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -104,6 +105,334 @@ class ControlTests(unittest.TestCase):
                 return None
             dependencies["compose"] = stack.enter_context(patch.object(control, "compose", side_effect=compose))
             yield dependencies
+
+    def guided_fixture(self, full=False, state="ready"):
+        self.release.update(releaseId="0.1.0", frontendReleaseId="0.1.0", frontendVersion="0.1.0", backendVersion="0.1.0")
+        self.release["source"] = {"backend": "1" * 40, "frontend": "2" * 40, "delivery": "3" * 40,
+                                  "backendDiffHash": "a" * 64, "frontendDiffHash": "a" * 64, "deliveryDiffHash": "a" * 64}
+        control.write_json(self.runtime / "release.json", self.release)
+        control.phase(state, releaseId=self.release["releaseId"])
+        for name in ["pending-release.json", "update-source.json", "previous-release.json"]:
+            (self.runtime / name).unlink(missing_ok=True)
+        directory = self.runtime.parent / "delivery with spaces"
+        (directory / "releases").mkdir(parents=True, exist_ok=True)
+        patch.object(control, "ROOT", directory).start()
+        selected = self.candidate(backend=True)
+        selected.update(releaseId="0.1.1", frontendReleaseId="0.1.1", frontendVersion="0.1.1", backendVersion="0.1.1")
+        selected["source"].update(backend="4" * 40, frontend="5" * 40)
+        target = copy.deepcopy(selected)
+        if full:
+            target["images"].update(gateway="sha256:" + "8" * 64, tools="sha256:" + "9" * 64)
+            target["source"]["delivery"] = "6" * 40
+        path = directory / "releases/stable.json"
+        compatible = directory / "releases/0.1.1-update.json"
+        control.write_json(path, target)
+        control.write_json(compatible, selected)
+        return path, compatible, target, selected
+
+    @contextlib.contextmanager
+    def guided_dependencies(self, answer="YES", tty=True):
+        output = io.StringIO()
+        sequence = []
+        def commit(config, old, selected):
+            sequence.append("update")
+            control.write_json(self.runtime / "release.json", selected)
+            control.phase("ready", releaseId=selected["releaseId"])
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(contextlib.redirect_stdout(output))
+            dependencies = {"output": output, "sequence": sequence}
+            dependencies["start"] = stack.enter_context(patch.object(control, "start", side_effect=lambda: sequence.append("start")))
+            dependencies["pull"] = stack.enter_context(patch.object(control, "ensure_images"))
+            dependencies["install"] = stack.enter_context(patch.object(control, "install_update", side_effect=commit))
+            dependencies["compose"] = stack.enter_context(patch.object(control, "compose"))
+            dependencies["account"] = stack.enter_context(patch.object(control, "bootstrap_text"))
+            stack.enter_context(patch.object(control.shutil, "disk_usage", return_value=SimpleNamespace(free=2 * 1024**3)))
+            stack.enter_context(patch.object(control.sys.stdin, "isatty", return_value=tty))
+            dependencies["prompt"] = stack.enter_context(patch("builtins.input", side_effect=answer if isinstance(answer, BaseException) or callable(answer) else None,
+                                                               return_value=answer))
+            yield dependencies
+
+    def assert_guided_no_update(self, dependencies):
+        dependencies["start"].assert_called_once_with()
+        for name in ["install", "pull", "account", "compose"]:
+            dependencies[name].assert_not_called()
+        self.assertEqual(control.current(), self.release)
+        self.assertFalse((self.runtime / "pending-release.json").exists())
+        self.assertFalse((self.runtime / "update-source.json").exists())
+
+    def test_guided_bootstrap_full_release_selects_exact_compatible_pair_with_one_confirmation(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap"]))
+        dependencies["prompt"].assert_called_once()
+        dependencies["start"].assert_not_called()
+        dependencies["pull"].assert_called_once_with(selected)
+        dependencies["install"].assert_called_once_with(self.config, self.release, selected)
+        self.assertEqual(control.read_json(self.runtime / "pending-release.json"), selected)
+        self.assertEqual(control.read_json(self.runtime / "update-source.json"), self.release)
+        self.assertEqual(control.current(), selected)
+        self.assertIn("backend 0.1.0, frontend 0.1.0", dependencies["output"].getvalue())
+        self.assertIn("миграции не нужны", dependencies["output"].getvalue())
+        dependencies["account"].assert_not_called(); dependencies["compose"].assert_not_called()
+
+    def test_guided_bootstrap_explicit_compatible_manifest_uses_reviewed_path(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap", "--release", str(compatible)]))
+        dependencies["install"].assert_called_once_with(self.config, self.release, selected)
+        dependencies["prompt"].assert_called_once()
+
+    def test_guided_bootstrap_external_full_manifest_can_use_exact_checked_in_compatible_release(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        external = self.runtime.parent / "external candidate/full.json"
+        control.write_json(external, target)
+        self.assertFalse((external.parent / "0.1.1-update.json").exists())
+        with self.guided_dependencies(answer="y") as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap", "--release", str(external)]))
+        dependencies["pull"].assert_called_once_with(selected)
+        dependencies["install"].assert_called_once_with(self.config, self.release, selected)
+        dependencies["prompt"].assert_called_once()
+
+    def test_guided_bootstrap_external_candidate_fallback_rejects_substitution_and_does_not_shadow_bad_adjacent_file(self):
+        for invalid_adjacent in [False, True]:
+            with self.subTest(invalid_adjacent=invalid_adjacent):
+                path, compatible, target, selected = self.guided_fixture(full=True)
+                external = self.runtime.parent / "external candidate/full.json"
+                adjacent = external.parent / "0.1.1-update.json"
+                control.write_json(external, target)
+                if invalid_adjacent:
+                    adjacent.write_text("{")
+                else:
+                    adjacent.unlink(missing_ok=True)
+                    selected["images"]["backend"] = "sha256:" + "8" * 64
+                    control.write_json(compatible, selected)
+                with self.guided_dependencies() as dependencies:
+                    control.bootstrap(control.parser().parse_args(["bootstrap", "--release", str(external), "--yes"]))
+                self.assert_guided_no_update(dependencies)
+                dependencies["prompt"].assert_not_called()
+
+    def test_guided_bootstrap_rejects_manifest_replacement_during_confirmation_before_update_side_effects(self):
+        for state in ["ready", "stopped"]:
+            with self.subTest(state=state):
+                path, compatible, target, selected = self.guided_fixture(full=True, state=state)
+                def replace_target(prompt):
+                    control.write_json(compatible, self.release)
+                    return "yes"
+                with self.guided_dependencies(answer=replace_target) as dependencies:
+                    with self.assertRaisesRegex(control.Failure, "manifest изменился"):
+                        control.bootstrap(control.parser().parse_args(["bootstrap"]))
+                dependencies["prompt"].assert_called_once()
+                for name in ["start", "install", "pull", "compose", "account"]:
+                    dependencies[name].assert_not_called()
+                self.assertEqual(control.current(), self.release)
+                self.assertEqual(control.read_json(self.runtime / "operation.json")["phase"], state)
+                self.assertFalse((self.runtime / "pending-release.json").exists())
+                self.assertFalse((self.runtime / "update-source.json").exists())
+
+    def test_guided_bootstrap_decline_and_eof_start_old_without_update_side_effects_and_show_exact_command(self):
+        for answer in ["n", "", "NO", EOFError()]:
+            with self.subTest(answer=type(answer).__name__ + str(answer)):
+                path, compatible, target, selected = self.guided_fixture(full=True)
+                with self.guided_dependencies(answer=answer) as dependencies:
+                    control.bootstrap(control.parser().parse_args(["bootstrap"]))
+                self.assert_guided_no_update(dependencies)
+                dependencies["prompt"].assert_called_once()
+                printed = dependencies["output"].getvalue().splitlines()
+                command = next(line for line in printed if line.startswith("TW_RUNTIME_DIR="))
+                self.assertEqual(shlex.split(command), ["TW_RUNTIME_DIR=" + str(self.runtime), str(control.ROOT / "traceweave.sh"),
+                                                       "update", "--release", str(compatible.resolve())])
+
+    def test_guided_bootstrap_non_tty_needs_explicit_yes_to_update(self):
+        for accepted in [False, True]:
+            with self.subTest(accepted=accepted):
+                path, compatible, target, selected = self.guided_fixture(full=True)
+                arguments = control.parser().parse_args(["bootstrap", *(["--yes"] if accepted else [])])
+                with self.guided_dependencies(tty=False) as dependencies:
+                    control.bootstrap(arguments)
+                dependencies["prompt"].assert_not_called()
+                if accepted:
+                    dependencies["install"].assert_called_once_with(self.config, self.release, selected)
+                    dependencies["start"].assert_not_called()
+                else:
+                    self.assert_guided_no_update(dependencies)
+
+    def test_guided_bootstrap_stopped_installation_starts_before_accepted_update(self):
+        path, compatible, target, selected = self.guided_fixture(full=True, state="stopped")
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap"]))
+        self.assertEqual(dependencies["sequence"], ["start", "update"])
+        dependencies["prompt"].assert_called_once()
+        dependencies["install"].assert_called_once_with(self.config, self.release, selected)
+
+    def test_guided_bootstrap_matching_application_pair_ignores_infrastructure_or_release_id_changes(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        matching = copy.deepcopy(self.release)
+        matching["images"].update(gateway=target["images"]["gateway"], tools=target["images"]["tools"])
+        matching["releaseId"] = "0.1.1"
+        control.write_json(path, matching)
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap", "--yes"]))
+        self.assert_guided_no_update(dependencies)
+        dependencies["prompt"].assert_not_called()
+
+    def test_guided_bootstrap_downgrade_prerelease_and_opaque_versions_never_guess_an_update(self):
+        variants = [
+            lambda old, new: new.update(frontendVersion="0.0.9"),
+            lambda old, new: new.update(backendVersion="0.0.9"),
+            lambda old, new: new.update(releaseId="0.0.9"),
+            lambda old, new: new.update(frontendVersion="0.1.1-rc.1"),
+            lambda old, new: old.update(backendVersion="custom-1"),
+            lambda old, new: new.update(releaseId="custom-2"),
+            lambda old, new: old.update(releaseId="custom-1"),
+        ]
+        for mutate in variants:
+            with self.subTest(variant=variants.index(mutate)):
+                path, compatible, target, selected = self.guided_fixture()
+                mutate(self.release, target)
+                control.write_json(self.runtime / "release.json", self.release)
+                control.write_json(path, target)
+                with self.guided_dependencies() as dependencies:
+                    control.bootstrap(control.parser().parse_args(["bootstrap", "--yes"]))
+                self.assert_guided_no_update(dependencies)
+                dependencies["prompt"].assert_not_called()
+
+    def test_guided_bootstrap_missing_invalid_or_incompatible_candidate_safely_starts_old(self):
+        for contents in [None, "{", "[]", '{"formatVersion":1}', '{"migrations":["bad"]}']:
+            with self.subTest(contents=contents):
+                path, compatible, target, selected = self.guided_fixture()
+                if contents is None:path.unlink()
+                else:path.write_text(contents)
+                with self.guided_dependencies() as dependencies:
+                    control.bootstrap(control.parser().parse_args(["bootstrap", "--yes"]))
+                self.assert_guided_no_update(dependencies)
+                dependencies["prompt"].assert_not_called()
+                self.assertIn("несовместим", dependencies["output"].getvalue())
+
+    def test_guided_bootstrap_missing_or_corrupt_compatible_manifest_never_installs_full_infrastructure(self):
+        for contents in [None, "{", "[]"]:
+            with self.subTest(contents=contents):
+                path, compatible, target, selected = self.guided_fixture(full=True)
+                if contents is None:compatible.unlink()
+                else:compatible.write_text(contents)
+                with self.guided_dependencies() as dependencies:
+                    control.bootstrap(control.parser().parse_args(["bootstrap", "--yes"]))
+                self.assert_guided_no_update(dependencies)
+                dependencies["prompt"].assert_not_called()
+
+    def test_guided_bootstrap_rejects_compatible_target_substitution_and_preserves_validation(self):
+        variants = [
+            lambda m: m["images"].update(backend="sha256:" + "8" * 64),
+            lambda m: m["images"].update(frontend="sha256:" + "8" * 64),
+            lambda m: m.update(frontendReleaseId="different"),
+            lambda m: m.update(backendContractHash="c" * 64),
+            lambda m: m["supportedClientContractHashes"].append("c" * 64),
+            lambda m: m["migrations"].append({"version": 2, "sha256": "c" * 64}),
+            lambda m: m["source"].update(backend="9" * 40),
+            lambda m: m["images"].update(tools="sha256:" + "8" * 64),
+        ]
+        for mutate in variants:
+            with self.subTest(variant=variants.index(mutate)):
+                path, compatible, target, selected = self.guided_fixture(full=True)
+                mutate(selected); control.write_json(compatible, selected)
+                with self.guided_dependencies() as dependencies:
+                    control.bootstrap(control.parser().parse_args(["bootstrap", "--yes"]))
+                self.assert_guided_no_update(dependencies)
+                dependencies["prompt"].assert_not_called()
+
+    def test_guided_bootstrap_interrupted_operation_requires_explicit_recovery_without_discovery_or_migration(self):
+        for state in ["update-migrating", "restore-verifying", "bootstrap-owner", "stopped-interrupted"]:
+            with self.subTest(state=state):
+                self.guided_fixture(full=True, state=state)
+                with self.guided_dependencies() as dependencies, patch.object(control, "bootstrap_update") as discover:
+                    with self.assertRaisesRegex(control.Failure, "незавершённую"):
+                        control.bootstrap(control.parser().parse_args(["bootstrap", "--yes"]))
+                for name in ["start", "install", "pull", "compose", "account", "prompt"]:
+                    dependencies[name].assert_not_called()
+                discover.assert_not_called()
+                self.assertEqual(control.read_json(self.runtime / "operation.json")["phase"], state)
+
+    def test_guided_bootstrap_missing_operation_or_configuration_does_not_recreate_installation(self):
+        for missing in ["operation.json", "installation.json"]:
+            with self.subTest(missing=missing):
+                self.guided_fixture(full=True)
+                control.write_json(self.runtime / "installation.json", self.config)
+                (self.runtime / missing).unlink()
+                with self.guided_dependencies() as dependencies:
+                    with self.assertRaises(control.Failure):
+                        control.bootstrap(control.parser().parse_args(["bootstrap", "--yes"]))
+                for name in ["start", "install", "pull", "compose", "account", "prompt"]:
+                    dependencies[name].assert_not_called()
+                self.assertFalse((self.runtime / missing).exists())
+
+    def test_explicit_resume_initial_bootstrap_uses_saved_release_without_new_release_discovery(self):
+        self.guided_fixture(full=True, state="bootstrap-owner")
+        arguments = control.parser().parse_args(["resume", "--yes"])
+        with self.bootstrap_dependencies({"count": 1, "withEmail": 1}) as dependencies, \
+                patch.object(control, "bootstrap_update") as discover, patch("builtins.input") as prompt:
+            control.resume(arguments)
+        discover.assert_not_called(); prompt.assert_not_called()
+        migrate = next(call for call in dependencies["compose"].call_args_list if call.args[-1] == "migrate")
+        self.assertEqual(migrate.kwargs["release"], self.release)
+        self.assertFalse(any("create" in call.args or "attach-email" in call.args for call in dependencies["compose"].call_args_list))
+        self.assertEqual(control.current(), self.release)
+        self.assertEqual(control.read_json(self.runtime / "operation.json")["phase"], "ready")
+
+    def test_failed_initial_image_pull_keeps_explicitly_resumable_bootstrap_using_saved_release(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        arguments = self.fresh_bootstrap()
+        with self.bootstrap_dependencies({"count": 1, "withEmail": 1}) as dependencies:
+            dependencies["ensure_images"].side_effect = control.Failure("Synthetic image pull failed")
+            with self.assertRaisesRegex(control.Failure, "Synthetic image pull failed"):
+                control.bootstrap(arguments)
+        self.assertEqual(control.read_json(self.runtime / "operation.json")["phase"], "bootstrap-preparing")
+        self.assertEqual(control.current(), self.release)
+        saved_config = control.load_config()
+        for name in ["execute", "initialize_volumes", "caddy_config", "wait_services", "compose"]:
+            dependencies[name].assert_not_called()
+        resume = control.parser().parse_args(["resume", "--release", str(path), "--yes"])
+        with self.bootstrap_dependencies({"count": 1, "withEmail": 1}) as dependencies, \
+                patch.object(control, "bootstrap_update") as discover, patch("builtins.input") as prompt:
+            control.resume(resume)
+        discover.assert_not_called(); prompt.assert_not_called()
+        dependencies["ensure_images"].assert_called_once_with(self.release)
+        migrate = next(call for call in dependencies["compose"].call_args_list if call.args[-1] == "migrate")
+        self.assertEqual(migrate.kwargs["release"], self.release)
+        self.assertFalse(any("create" in call.args or "attach-email" in call.args for call in dependencies["compose"].call_args_list))
+        self.assertEqual(control.load_config(), saved_config)
+        self.assertEqual(control.current(), self.release)
+        self.assertEqual(control.read_json(self.runtime / "operation.json")["phase"], "ready")
+
+    def test_explicit_resume_unknown_bootstrap_phase_does_not_migrate_or_open_gateway(self):
+        self.guided_fixture(full=True, state="bootstrap-unknown")
+        with self.guided_dependencies() as dependencies:
+            with self.assertRaisesRegex(control.Failure, "Unknown interrupted bootstrap"):
+                control.resume(control.parser().parse_args(["resume", "--yes"]))
+        for name in ["start", "install", "pull", "compose", "account", "prompt"]:
+            dependencies[name].assert_not_called()
+
+    def test_guided_bootstrap_schema_append_is_automatic_and_describes_backup_restore(self):
+        path, compatible, target, selected = self.guided_fixture()
+        target["migrations"].append({"version": 2, "sha256": "c" * 64})
+        control.write_json(path, target)
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap"]))
+        dependencies["install"].assert_called_once_with(self.config, self.release, target)
+        dependencies["prompt"].assert_called_once()
+        self.assertIn("схема базы обновится автоматически", dependencies["output"].getvalue())
+        self.assertIn("восстановление копии", dependencies["output"].getvalue())
+
+    def test_guided_bootstrap_keeps_existing_account_fields_and_private_mail_configuration(self):
+        self.guided_fixture()
+        settings = dict(self.config, smtpURL="smtps://mail.unit.test:465", smtpUser="synthetic-user", registrationEnabled=False)
+        control.write_json(self.runtime / "installation.json", settings)
+        control.atomic(self.runtime / "secrets/smtp_password", "Private synthetic value.\n", 0o444)
+        arguments = control.parser().parse_args(["bootstrap", "--yes", "--email", "replacement@example.test", "--name", "Replacement"])
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(arguments)
+        dependencies["account"].assert_not_called(); dependencies["compose"].assert_not_called()
+        self.assertEqual(control.load_config(), settings)
+        self.assertEqual((self.runtime / "secrets/smtp_password").read_text(), "Private synthetic value.\n")
+        self.assertNotIn("Private synthetic value", dependencies["output"].getvalue())
 
     def test_first_bootstrap_missing_stable_manifest_has_no_installation_volume_or_account_side_effects(self):
         self.fresh_bootstrap()

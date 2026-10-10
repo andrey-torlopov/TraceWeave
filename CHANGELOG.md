@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+### Guided bootstrap updates
+
+- Display installed backend/frontend versions and offer a newer compatible local release when bootstrap is repeated.
+- Select the verified 0.1.1 update manifest for an existing 0.1.0 installation, retaining its infrastructure.
+- Run the existing backup/migration/readiness pipeline after confirmation; preserve the installed release when declined and refuse automatic downgrades or incomplete-operation replacement.
+
 ### Documentation boundary and banners — 2026-10-10
 
 - Use the TraceWeave illustration with distinct backend/frontend paper-card markers.
