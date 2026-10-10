@@ -1,34 +1,50 @@
+<p align="center">
+  <img src="docs/banner.svg" alt="TraceWeave Delivery" width="720"/>
+</p>
+
+<p align="center"><strong>Docker Compose · Caddy · PostgreSQL 18</strong></p>
+
 # TraceWeave
 
-TraceWeave запускается в Docker и открывается в браузере.
+*Read this in other languages: [Русский](README-ru.md)*
 
-**Сейчас публичный релиз ещё не выпущен.** Для компьютера владельца есть команда с уже собранными образами в [локальной инструкции](docs/local-use.md#сейчас-уже-собранные-образы-на-компьютере-владельца). Запуск со скачиванием на новом компьютере станет доступен после публикации образов.
+The installation and operations repository for TraceWeave. It connects the independent backend and frontend with PostgreSQL and a single public gateway.
 
-## На своём компьютере
+## Key Features
 
-После первого публичного выпуска установите и запустите Docker, откройте терминал в папке поставки и вызовите:
+- **Local Docker installation and HTTPS server configuration.**
+- **Interactive bootstrap, account creation and persistent installation state.**
+- **Maintenance, compatible updates, offline backup and restore to new volumes.**
+- **Canonical OpenAPI, SQL, archive schemas, specification and accepted change requests.**
+
+## Quick Start
+
+Build from source using [Quick Start](docs/en/quick-start.md). For a published release containing `releases/stable.json`, run:
 
 ```sh
 ./bootstrap.sh
 ```
 
-Скрипт скачает образы выбранного релиза, запустит приложение, при первой установке запросит email, имя и пароль, затем покажет адрес **http://127.0.0.1:8080**.
+Bootstrap prompts for email, name and a hidden password, then opens the installation at **http://127.0.0.1:8080**.
 
-Подробности: [локальный запуск](docs/local-use.md).
+**Status:** public container images have not been released yet. Source builds are available; full P0 acceptance remains separate.
 
-## На сервере с доменом
+## Documentation
 
-Последовательность: VPS → SSH → Docker → DNS → SMTP → bootstrap → HTTPS.
+- [Installation](docs/en/installation.md)
+- [Quick Start](docs/en/quick-start.md)
+- [Architecture](docs/en/architecture.md)
+- [API and Contracts](docs/en/api.md)
+- [Testing](docs/en/testing.md)
+- [Full Documentation](docs/en/index.md)
+- [Changelog](CHANGELOG.md)
 
-[Пошаговая инструкция для администратора](docs/server-deployment.md).
+## Project Repositories
 
-## Остановить и снова запустить
+| Repository | Responsibility |
+| --- | --- |
+| [TraceWeaveBackend](https://github.com/andrey-torlopov/TraceWeaveBackend) | API, domain validation, PostgreSQL, immutable files and export jobs |
+| [TraceWeaveFrontend](https://github.com/andrey-torlopov/TraceWeaveFrontend) | Browser application, graph, editors and local draft recovery |
+| [TraceWeave](https://github.com/andrey-torlopov/TraceWeave) | Compose, gateway, operator CLI, canonical contracts and specification |
 
-```sh
-./traceweave.sh stop
-./bootstrap.sh
-```
-
-Повторный запуск использует установленную версию и сохранённые данные. Новый аккаунт и пароль заново не создаются.
-
-Для разработчика и администратора: [сборка и детали установки](docs/installation.md), [резервные копии и управление](docs/operations.md), [публикация и обновление релизов](docs/releases.md).
+The specification and machine contracts live only in the delivery repository. Component documentation explains the implementation without maintaining another specification.
