@@ -1,0 +1,6 @@
+# Explicit HTTPS mode. Enable only after configuring a domain and SMTP.
+services:
+  gateway:
+    ports: !override
+      - "${TW_SERVER_BIND:-0.0.0.0}:80:8080"
+      - "${TW_SERVER_BIND:-0.0.0.0}:443:8443"
