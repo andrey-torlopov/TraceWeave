@@ -227,8 +227,9 @@ assert json.loads(Path('/state/synthetic-installation.json').read_text()) == {'s
 spec=importlib.util.spec_from_file_location('ops','/opt/traceweave/ops.py')
 ops=importlib.util.module_from_spec(spec);spec.loader.exec_module(ops)
 c=ops.connect()
+c.autocommit=False
 try:
- with c.transaction():
+ with c:
   with c.cursor() as q:
    q.execute('SET TRANSACTION READ ONLY')
    result={}
