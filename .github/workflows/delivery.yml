@@ -43,12 +43,14 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: andrey-torlopov/TraceWeaveBackend
+          token: ${{ secrets.SOURCE_REPOSITORIES_TOKEN || github.token }}
           ref: ${{ steps.versions.outputs.backend }}
           path: .ci/backend
           persist-credentials: false
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: andrey-torlopov/TraceWeaveFrontend
+          token: ${{ secrets.SOURCE_REPOSITORIES_TOKEN || github.token }}
           ref: ${{ steps.versions.outputs.frontend }}
           path: .ci/frontend
           persist-credentials: false

@@ -91,7 +91,7 @@ for TW_ARGUMENT in "$@"; do
     --backend-path=*) TW_BACKEND_PATH=${TW_ARGUMENT#--backend-path=};;
     --frontend-path=*) TW_FRONTEND_PATH=${TW_ARGUMENT#--frontend-path=};;
     --release=*) TW_RELEASE_PATH=${TW_ARGUMENT#--release=};;
-    --release|--release-id|--origin|--port|--email|--name|--backup|--smtp-url|--smtp-user|--smtp-from|--backend-path|--frontend-path) TW_PENDING_OPTION=$TW_ARGUMENT;;
+    --release|--release-id|--backend-version|--frontend-version|--delivery-version|--origin|--port|--email|--name|--backup|--smtp-url|--smtp-user|--smtp-from|--backend-path|--frontend-path) TW_PENDING_OPTION=$TW_ARGUMENT;;
     -*) ;;
     *) if [ -z "$TW_COMMAND" ]; then TW_COMMAND=$TW_ARGUMENT; fi;;
   esac

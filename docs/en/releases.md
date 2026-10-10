@@ -19,6 +19,8 @@ A release is a compatible pair of independent backend/frontend images plus pinne
 
 Source builder produces an ignored `releases/*.local.json` only after clean committed source and contract checks. It retains tags/images and refuses manifest ID reuse. Local image IDs cannot be pulled on another Docker-host.
 
+For publication from GitHub tags, the source builder accepts independent `--backend-version`, `--frontend-version`, and `--delivery-version` values using `MAJOR.MINOR.PATCH` without `v`. Backend/frontend versions are passed to the existing Dockerfiles and recorded in the manifest; an explicit frontend version also becomes its `frontendReleaseId`. Gateway/tools use the delivery version in OCI labels. All four images receive OCI version/source/ref.name labels and component revision labels; an explicit delivery version additionally records and checks the delivery checkout before and after building. The publication workflow checks tag checkouts and tag/version agreement. Omitting these options preserves the existing local release-ID behavior. [Project task](../tasks/TW-E8-002-github-release-tags.md).
+
 Backend metadata is `/app/backend-release.json`; frontend metadata is `/opt/traceweave/frontend-release.json`. Readiness checks baked versions/contracts and actual migration history against the manifest. A backend-only update retains the frontend image and `frontendReleaseId`. Gateway exposes the current overall release through `/release.json`, including maintenance.
 
 ## Public Packaging
@@ -26,6 +28,14 @@ Backend metadata is `/app/backend-release.json`; frontend metadata is `/opt/trac
 Public application images have not been released. A future registry release must publish verified images for the declared architectures, check anonymous pulls, and produce immutable registry-digest manifests. Include the versioned manifest, `releases/stable.json` and `releases/tools-image.txt` with the matching tools digest; verify bootstrap on a clean host, including without host Python.
 
 Source GitHub visibility is separate from registry visibility. The existing Docker delivery workflow builds/tests amd64 and arm64; it does not push images. Registry publishing requires its own workflow/action. Publishing does not update installed users automatically; repeat bootstrap uses their saved manifest.
+
+## Docker Hub Publication Settings
+
+Backend/frontend contain `.github/workflows/dockerhub.yml`. A `vMAJOR.MINOR.PATCH` tag push publishes that component after native Linux amd64/arm64 validation. Manual `full_release=true` publishes backend/frontend/gateway/tools using one new version. GitHub `v0.1.0` maps to Docker `0.1.0` and baked version `0.1.0`; tested images are transferred without rebuilding, and manifests record version tags with registry digests. Existing tags cannot be republished.
+
+Both source repositories require Secrets `DOCKERHUB_TOKEN` (Docker Hub Read/Write PAT, already provided by the owner) and `SOURCE_REPOSITORIES_TOKEN` (GitHub fine-grained PAT with Contents: Read for the private backend/frontend repositories). Variables: `DOCKERHUB_USERNAME=andreytorlopov`, `TRACEWEAVE_DELIVERY_TAG=v0.1.0`, `TRACEWEAVE_COUNTERPART_TAG=v0.1.0`. The counterpart is frontend for a backend run and backend for a frontend run. **TraceWeave** requires only `SOURCE_REPOSITORIES_TOKEN` for integration CI; it does not need Docker Hub settings. The default `GITHUB_TOKEN` cannot read another private repository. [Private checkout documentation](https://github.com/actions/checkout#checkout-multiple-repos-private).
+
+All four `andreytorlopov/traceweave-{backend,frontend,gateway,tools}` Docker Hub repositories must be Public with **All tags are immutable**; the workflow checks this before building. Run the first full release manually from backend Actions with `release_tag=v0.1.0` and `full_release=true`, after the initial matching tags exist in all three GitHub repositories. Image availability and installable-manifest acceptance require separate evidence. [Current release protocol](../tasks/TW-E8-003-dockerhub-publication.md).
 
 ## Old Tabs and Pending Requests
 

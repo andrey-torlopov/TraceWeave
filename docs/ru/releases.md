@@ -19,9 +19,29 @@
 
 Локальный source builder по умолчанию использует ID `docker-1`; инструкции текущего пакета явно выбирают `e8-docker-1`. Он требует committed и чистые backend/frontend checkout, включая неигнорируемые untracked файлы; Git HEAD, статус source и hash контракта проверяются до и после сборки. Файл `releases/e8-docker-1.local.json` появляется только после успешного `build-source`; документация не подменяет его фиктивным digest. Повторная сборка с уже существующим локальным manifest этого ID отказывает до изменения images. Для следующей сборки нужен новый ID: старые manifest и tags сохраняют путь отката. Все четыре собранных образа удерживаются под отдельными tags, включая `traceweave/tools:e8-docker-1`; отдельный fallback tag `traceweave/tools:docker-1` может оставаться для первоначального Docker-only CLI. Tags помогают удерживать локальные images, но manifest закрепляет их immutable IDs. Для Docker-only bootstrap выбирайте immutable tools ID/digest именно нужного релиза по [инструкции подготовки CLI](installation.md#cli-с-python-и-без-python). Локальные `releases/*.local.json` исключены из Git; публичный release manifest должен использовать доступные registry digests.
 
+Для публикации по GitHub-тегам сборщик принимает независимые `--backend-version`, `--frontend-version`, `--delivery-version` в формате `MAJOR.MINOR.PATCH` без `v`. Версии backend/frontend передаются существующим Dockerfiles и записываются в manifest; при явной frontend version её же получает `frontendReleaseId`. Gateway/tools получают delivery version в OCI labels. Все четыре образа получают OCI version/source/ref.name, компоненты — revision; при явной delivery version записывается также commit поставки и проверяется её чистота до/после сборки. Checkout выбранных тегов и совпадение tag/version проверяет workflow публикации. Без новых аргументов прежний локальный режим с версиями из release ID сохраняется. [Проектная задача](../tasks/TW-E8-002-github-release-tags.md).
+
 Frontend runtime metadata находится вне webroot в `/opt/traceweave/frontend-release.json`, backend — в `/app/backend-release.json`. Readiness сравнивает baked frontend `releaseId` с `frontendReleaseId` манифеста, его version/hash — с `frontendVersion`/`contractHash`, backend version/hash — с `backendVersion`/`backendContractHash`, историю БД — с `migrations`. При замене только backend новый общий `releaseId` сохраняет прежние frontend image, `frontendReleaseId`, `frontendVersion` и `contractHash`. Gateway отдаёт `/release.json` с общим release ID, frontend version, contract hash и списком supported hashes даже во время обслуживания.
 
 Публикация пока не выполнена. Образы приложения в GHCR не заявляются доступными. Владелец отдельно публикует проверенные multiarch images и manifest с registry digests, настраивает их public visibility и документирует наблюдённую приёмку. [Правила GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry). Публикация не обновляет установку автоматически.
+
+## Настройки публикации Docker Hub
+
+Workflow `.github/workflows/dockerhub.yml` расположен в backend и frontend. Push тега `vMAJOR.MINOR.PATCH` публикует только этот компонент после проверок Linux amd64/arm64; ручной запуск с `full_release=true` выпускает backend/frontend/gateway/tools одной новой версии. GitHub `v0.1.0` соответствует Docker `0.1.0` и встроенной версии `0.1.0`. Проверенные images передаются между jobs без пересборки; итоговый manifest фиксирует version tag и registry digest. Повторная публикация существующего тега запрещена.
+
+В backend/frontend нужны следующие Actions settings:
+
+| Тип | Имя | Значение первого выпуска |
+| --- | --- | --- |
+| Secret | `DOCKERHUB_TOKEN` | Docker Hub PAT с Read/Write; уже добавлен владельцем. |
+| Secret | `SOURCE_REPOSITORIES_TOKEN` | GitHub fine-grained PAT, Contents: Read в TraceWeaveBackend и TraceWeaveFrontend; оба repository приватные. |
+| Variable | `DOCKERHUB_USERNAME` | `andreytorlopov` |
+| Variable | `TRACEWEAVE_DELIVERY_TAG` | `v0.1.0` |
+| Variable | `TRACEWEAVE_COUNTERPART_TAG` | `v0.1.0` — frontend tag в backend settings и backend tag в frontend settings. |
+
+В **TraceWeave** требуется только Secret `SOURCE_REPOSITORIES_TOKEN` для интеграционного CI. Docker Hub Secret/variables в поставке не используются. Стандартный `GITHUB_TOKEN` не даёт доступ ко второму приватному repository. [Официальный пример private checkout](https://github.com/actions/checkout#checkout-multiple-repos-private).
+
+Четыре Docker Hub repositories `andreytorlopov/traceweave-{backend,frontend,gateway,tools}` должны быть Public и иметь **All tags are immutable**. Workflow проверяет это до сборок. Первый выпуск запускается вручную из Actions backend: `release_tag=v0.1.0`, `full_release=true`, после появления одинакового начального тега во всех трёх GitHub repositories. Доступность images и готовность installable manifest подтверждаются отдельно. [Протокол текущего выпуска](../tasks/TW-E8-003-dockerhub-publication.md).
 
 ## Что выпустить для запуска одной командой
 

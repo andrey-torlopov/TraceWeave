@@ -42,7 +42,9 @@ printf '\\0' >> "$TW_STUB_CALLS"
 case "${1-} ${2-}" in
   'image inspect') exit "${TW_STUB_INSPECT_STATUS:-1}";;
   'pull '*|'build '*) exit 73;;
-  'context inspect') exit 73;;
+  'context inspect')
+    if [ "${TW_STUB_CONTEXT_ALLOWED:-0}" = 1 ]; then printf '%s\\n' 'unix:///synthetic/docker.sock'; else exit 73; fi;;
+  'run '*) exit 73;;
   *) echo 'Unexpected command in offline Docker preflight test.' >&2; exit 74;;
 esac
 ''')
@@ -142,6 +144,27 @@ esac
         default = 'traceweave/tools:docker-1'
         self.assertEqual(calls, [['image', 'inspect', default],
                                 ['build', '-t', default, '-f', str(self.checkout / 'tools' / 'Dockerfile'), str(self.checkout)]])
+
+    def test_version_options_before_build_command_preserve_source_mounts_and_arguments(self):
+        self.pin_file(PUBLIC_PIN + '\n')
+        for command in ('mkdir', 'chmod', 'id'):
+            (self.bin / command).symlink_to(shutil.which(command))
+        backend, frontend = self.root / 'backend', self.root / 'frontend'
+        for checkout, manifest in [(backend, 'Package.swift'), (frontend, 'package-lock.json')]:
+            (checkout / '.git').mkdir(parents=True)
+            (checkout / manifest).write_text('Synthetic source fixture.\n')
+        arguments = ['--backend-version', '0.1.1', '--frontend-version', '0.1.0', '--delivery-version', '0.2.0',
+                     'build-source', '--backend-path', str(backend), '--frontend-path', str(frontend)]
+        result = subprocess.run(['/bin/sh', str(self.checkout / 'traceweave.sh'), *arguments], cwd=self.checkout,
+                                env={**self.env, 'TW_STUB_INSPECT_STATUS': '0', 'TW_STUB_CONTEXT_ALLOWED': '1'},
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, STUB_STOP, result.stderr)
+        calls = [[value.decode() for value in call.split(b'\0')] for call in self.calls_file.read_bytes().split(b'\0\0') if call]
+        run = calls[-1]
+        self.assertEqual(run[0], 'run')
+        self.assertEqual(run[-len(arguments):], arguments)
+        for checkout in [backend, frontend]:
+            self.assertIn('type=bind,source=' + str(checkout) + ',target=' + str(checkout) + ',readonly', run)
 
 
 if __name__ == '__main__':

@@ -575,9 +575,9 @@ class ControlTests(unittest.TestCase):
         (frontend / "package-lock.json").write_text("{}\n")
         (backend / "Sources" / "ResearchGraphInfrastructure" / "Resources" / "0001.sql").write_text("SELECT 1;\n")
         fixture = SimpleNamespace(root=root, backend=backend, frontend=frontend, commands=[],
-                                  revisions={str(backend): "a" * 40, str(frontend): "b" * 40},
-                                  diffs={str(backend): "", str(frontend): ""},
-                                  statuses={str(backend): "", str(frontend): ""}, after_frontend_build=None)
+                                  revisions={str(backend): "a" * 40, str(frontend): "b" * 40, str(root): "c" * 40},
+                                  diffs={str(backend): "", str(frontend): "", str(root): ""},
+                                  statuses={str(backend): "", str(frontend): "", str(root): ""}, after_frontend_build=None)
         fixture.arguments = SimpleNamespace(backend_path=str(backend), frontend_path=str(frontend), release_id="synthetic-built")
         def command(arguments, **kwargs):
             fixture.commands.append(arguments)
@@ -626,6 +626,51 @@ class ControlTests(unittest.TestCase):
                 control.build_source(fixture.arguments)
         execute.assert_not_called()
         self.assertEqual(destination.read_bytes(), saved)
+
+    def test_tagged_source_build_keeps_independent_component_versions_and_provenance(self):
+        fixture = self.source_build_fixture()
+        fixture.arguments.backend_version = "0.1.1"
+        fixture.arguments.frontend_version = "0.1.0"
+        fixture.arguments.delivery_version = "0.2.0"
+        with patch.object(control, "ROOT", fixture.root), patch.object(control, "execute", side_effect=fixture.command), contextlib.redirect_stdout(io.StringIO()):
+            control.build_source(fixture.arguments)
+        release = control.manifest(fixture.root / "releases" / "synthetic-built.local.json")
+        self.assertEqual((release["releaseId"], release["backendVersion"], release["frontendVersion"], release["frontendReleaseId"]),
+                         ("synthetic-built", "0.1.1", "0.1.0", "0.1.0"))
+        builds = [command for command in fixture.commands if command[:2] == ["docker", "build"]]
+        for command, component, version in zip(builds, ["delivery", "delivery", "backend", "frontend"], ["0.2.0", "0.2.0", "0.1.1", "0.1.0"]):
+            self.assertIn("org.opencontainers.image.version=" + version, command)
+            self.assertIn("org.opencontainers.image.ref.name=v" + version, command)
+            checkout = getattr(fixture, component) if component != "delivery" else fixture.root
+            self.assertIn("org.opencontainers.image.revision=" + fixture.revisions[str(checkout)], command)
+        self.assertIn("BACKEND_VERSION=0.1.1", builds[2])
+        self.assertIn("FRONTEND_VERSION=0.1.0", builds[3])
+        self.assertIn("RELEASE_ID=0.1.0", builds[3])
+        self.assertEqual(release["source"]["delivery"], fixture.revisions[str(fixture.root)])
+
+    def test_tagged_source_build_rejects_invalid_versions_before_external_commands(self):
+        for component in ["backend", "frontend", "delivery"]:
+            for index, version in enumerate(["", "v0.1.0", "0.1", "01.1.0", "0.1.0-rc.1", "../escape", "9" * 80 + ".1.0"]):
+                fixture = self.source_build_fixture(component + "-" + str(index))
+                setattr(fixture.arguments, component + "_version", version)
+                with self.subTest(component=component, version=version), patch.object(control, "ROOT", fixture.root), patch.object(control, "execute") as execute:
+                    with self.assertRaisesRegex(control.Failure, "Invalid " + component + " version"):
+                        control.build_source(fixture.arguments)
+                execute.assert_not_called()
+
+    def test_tagged_source_build_refuses_dirty_or_drifting_delivery(self):
+        for changed_before in [True, False]:
+            fixture = self.source_build_fixture("delivery-" + str(changed_before))
+            fixture.arguments.delivery_version = "0.1.0"
+            if changed_before:
+                fixture.statuses[str(fixture.root)] = " M tools/control.py"
+            else:
+                fixture.after_frontend_build = lambda: fixture.revisions.update({str(fixture.root): "d" * 40})
+            with self.subTest(changed_before=changed_before), patch.object(control, "ROOT", fixture.root), patch.object(control, "execute", side_effect=fixture.command):
+                with self.assertRaisesRegex(control.Failure, "committed and clean" if changed_before else "changed during build"):
+                    control.build_source(fixture.arguments)
+            self.assertFalse((fixture.root / "releases" / "synthetic-built.local.json").exists())
+            if changed_before:self.assertFalse(any(command[0] == "docker" for command in fixture.commands))
 
     def test_source_or_contract_drift_during_build_never_writes_release_manifest(self):
         for kind in ["backend-head", "frontend-diff", "new-untracked", "contract"]:

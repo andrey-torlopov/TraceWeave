@@ -481,19 +481,38 @@ def build_source(a):
     if not (backend/'Package.swift').is_file() or not (frontend/'package-lock.json').is_file():raise Failure('Provide independent backend/frontend source checkouts.')
     rid=a.release_id
     if not re.fullmatch('[a-zA-Z0-9._-]{1,80}',rid):raise Failure('Invalid release ID.')
+    versions={name:getattr(a,name+'_version',None) for name in ['backend','frontend','delivery']}
+    for name,version in versions.items():
+        if version is not None and (len(version)>80 or not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)',version)):
+            raise Failure('Invalid '+name+' version; use MAJOR.MINOR.PATCH without a v prefix.')
+    tagged_delivery=versions['delivery'] is not None
+    versions={name:version if version is not None else rid for name,version in versions.items()}
+    frontend_release=versions['frontend'] if getattr(a,'frontend_version',None) is not None else rid
     path=ROOT/'releases'/str(rid+'.local.json')
     if path.exists():raise Failure('Release ID already has a local manifest; choose a new --release-id to preserve rollback images.')
     git=lambda p,*args:execute(['git','-c','safe.directory='+str(p),'-C',str(p),*args],capture=True)
     revision=lambda p:git(p,'rev-parse','HEAD')
     dirty=lambda p:hashlib.sha256(git(p,'diff','--no-ext-diff','--no-textconv','HEAD').encode()).hexdigest()
-    state=lambda:({'backend':revision(backend),'frontend':revision(frontend),'backendDiffHash':dirty(backend),'frontendDiffHash':dirty(frontend)},hash_file(ROOT/'contracts/openapi.yaml'),[git(p,'status','--porcelain=v1','--untracked-files=all') for p in [backend,frontend]])
+    def state():
+        source={'backend':revision(backend),'frontend':revision(frontend),'backendDiffHash':dirty(backend),'frontendDiffHash':dirty(frontend)}
+        checkouts=[backend,frontend]
+        if tagged_delivery:
+            source.update(delivery=revision(ROOT),deliveryDiffHash=dirty(ROOT));checkouts.append(ROOT)
+        return source,hash_file(ROOT/'contracts/openapi.yaml'),[git(p,'status','--porcelain=v1','--untracked-files=all') for p in checkouts]
     before=state()
     if any(before[2]):raise Failure('Source checkouts must be committed and clean, including untracked files; no build started.')
     contract=before[1];tools_image='traceweave/tools:'+rid
-    execute(['docker','build','-t',tools_image,'-f',str(ROOT/'tools/Dockerfile'),str(ROOT)])
-    execute(['docker','build','-t','traceweave/gateway:'+rid,'-f',str(ROOT/'gateway/Dockerfile'),str(ROOT)])
-    execute(['docker','build','--build-arg','BACKEND_VERSION='+rid,'--build-arg','OPENAPI_CONTRACT_SHA256='+contract,'--build-arg','SOURCE_REVISION='+before[0]['backend'],'-t','traceweave/backend:'+rid,str(backend)])
-    execute(['docker','build','--build-context','contract='+str(ROOT/'contracts'),'--build-arg','OPENAPI_CONTRACT_SHA256='+contract,'--build-arg','RELEASE_ID='+rid,'--build-arg','FRONTEND_VERSION='+rid,'-t','traceweave/frontend:'+rid,str(frontend)])
+    def labels(component):
+        name=component if component in ['backend','frontend'] else 'delivery'
+        repository='TraceWeave'+({'backend':'Backend','frontend':'Frontend'}.get(component,''))
+        values={'org.opencontainers.image.version':versions[name],'org.opencontainers.image.source':'https://github.com/andrey-torlopov/'+repository}
+        if name in before[0]:values['org.opencontainers.image.revision']=before[0][name]
+        if re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',versions[name]):values['org.opencontainers.image.ref.name']='v'+versions[name]
+        return [argument for key,value in values.items() for argument in ['--label',key+'='+value]]
+    execute(['docker','build',*labels('tools'),'-t',tools_image,'-f',str(ROOT/'tools/Dockerfile'),str(ROOT)])
+    execute(['docker','build',*labels('gateway'),'-t','traceweave/gateway:'+rid,'-f',str(ROOT/'gateway/Dockerfile'),str(ROOT)])
+    execute(['docker','build',*labels('backend'),'--build-arg','BACKEND_VERSION='+versions['backend'],'--build-arg','OPENAPI_CONTRACT_SHA256='+contract,'--build-arg','SOURCE_REVISION='+before[0]['backend'],'-t','traceweave/backend:'+rid,str(backend)])
+    execute(['docker','build',*labels('frontend'),'--build-context','contract='+str(ROOT/'contracts'),'--build-arg','OPENAPI_CONTRACT_SHA256='+contract,'--build-arg','RELEASE_ID='+frontend_release,'--build-arg','FRONTEND_VERSION='+versions['frontend'],'-t','traceweave/frontend:'+rid,str(frontend)])
     execute(['docker','pull',PG_IMAGE])
     images={k:execute(['docker','image','inspect','--format','{{.Id}}',v],capture=True) for k,v in [('backend','traceweave/backend:'+rid),('frontend','traceweave/frontend:'+rid),('tools',tools_image),('gateway','traceweave/gateway:'+rid)]}
     images.update(postgres=PG_IMAGE)
@@ -502,11 +521,11 @@ def build_source(a):
         migrations.append({'version':int(p.name[:4]),'sha256':hash_file(p)})
     if state()!=before:raise Failure('Source or contract changed during build; no release manifest written. Retry with a new ID from stable checkouts.')
     architecture=execute(['docker','info','--format','{{.Architecture}}'],capture=True)
-    value={'formatVersion':1,'releaseId':rid,'frontendReleaseId':rid,'frontendVersion':rid,'backendVersion':rid,'backendContractHash':contract,'images':images,'postgresMajor':18,'contractHash':contract,'supportedClientContractHashes':[contract],'migrations':migrations,'platforms':['linux/'+('arm64' if architecture in ['arm64','aarch64'] else 'amd64')],'source':before[0],'validation':'built; run integration before publication','rollback':'same migration history only; otherwise restore verified backup'}
+    value={'formatVersion':1,'releaseId':rid,'frontendReleaseId':frontend_release,'frontendVersion':versions['frontend'],'backendVersion':versions['backend'],'backendContractHash':contract,'images':images,'postgresMajor':18,'contractHash':contract,'supportedClientContractHashes':[contract],'migrations':migrations,'platforms':['linux/'+('arm64' if architecture in ['arm64','aarch64'] else 'amd64')],'source':before[0],'validation':'built; run integration before publication','rollback':'same migration history only; otherwise restore verified backup'}
     write_json(path,value,0o644);print('Local immutable release: '+str(path))
 
 def parser():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['bootstrap','start','stop','restart','status','logs','backup','restore','update','rollback','resume','restore-revert','maintenance','configure-mail','account','build-source']);p.add_argument('extra',nargs='*');p.add_argument('--release',default=str(ROOT/'releases/stable.json'));p.add_argument('--release-id',default='docker-1');p.add_argument('--origin',default='http://127.0.0.1:8080');p.add_argument('--port',type=int);p.add_argument('--email');p.add_argument('--name');p.add_argument('--backup');p.add_argument('--yes',action='store_true');p.add_argument('--smtp-url');p.add_argument('--smtp-user');p.add_argument('--smtp-from');p.add_argument('--enable-registration',action='store_true');p.add_argument('--backend-path',default=str(ROOT.parent/'TraceWeaveBackend'));p.add_argument('--frontend-path',default=str(ROOT.parent/'TraceWeaveFrontend'));return p
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['bootstrap','start','stop','restart','status','logs','backup','restore','update','rollback','resume','restore-revert','maintenance','configure-mail','account','build-source']);p.add_argument('extra',nargs='*');p.add_argument('--release',default=str(ROOT/'releases/stable.json'));p.add_argument('--release-id',default='docker-1');p.add_argument('--backend-version');p.add_argument('--frontend-version');p.add_argument('--delivery-version');p.add_argument('--origin',default='http://127.0.0.1:8080');p.add_argument('--port',type=int);p.add_argument('--email');p.add_argument('--name');p.add_argument('--backup');p.add_argument('--yes',action='store_true');p.add_argument('--smtp-url');p.add_argument('--smtp-user');p.add_argument('--smtp-from');p.add_argument('--enable-registration',action='store_true');p.add_argument('--backend-path',default=str(ROOT.parent/'TraceWeaveBackend'));p.add_argument('--frontend-path',default=str(ROOT.parent/'TraceWeaveFrontend'));return p
 
 def main():
     a=parser().parse_args()
