@@ -21,6 +21,21 @@ Frontend runtime metadata находится вне webroot в `/opt/traceweave/
 
 Публикация пока не выполнена. Образы приложения в GHCR не заявляются доступными. Владелец отдельно публикует проверенные multiarch images и manifest с registry digests, настраивает их public visibility и документирует наблюдённую приёмку. [Правила GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry). Публикация не обновляет установку автоматически.
 
+## Что выпустить для запуска одной командой
+
+Публичный GitHub-репозиторий хранит исходники. Docker-образы загружаются отдельно в реестр: GHCR или Docker Hub. Для TraceWeave удобен GHCR рядом с текущими репозиториями; отдельный Docker Hub не обязателен. PostgreSQL уже берётся из официального публичного образа.
+
+До выдачи пользователю команды `./bootstrap.sh` разработчик выполняет:
+
+1. Собирает и проверяет backend, frontend, gateway и tools из согласованных source revisions для заявленных платформ. Текущий CI тестирует две архитектуры, но не загружает образы; `build-source` собирает только архитектуру своего Docker-хоста.
+2. Авторизуется в выбранном реестре, присваивает релизные tags и отправляет четыре образа. Для двух платформ выпускает общий image index каждого компонента. Это отдельная операция [публикации images](https://docs.docker.com/docker-hub/repos/manage/hub-images/push/).
+3. Делает все четыре image repositories публичными и проверяет анонимное скачивание. Публичность GitHub source repository сама по себе не делает GHCR packages публичными.
+4. Выпускает `releases/RELEASE_ID.json` с фактическими registry digests вместо локальных image IDs, сохраняя hashes контрактов, версии компонентов и migrations. Имя файла соответствует реальному release ID, не условному примеру.
+5. Включает тот же проверенный manifest как `releases/stable.json` и единственную строку `images.tools` как `releases/tools-image.txt`. Второй файл позволяет скачать tools без установленного Python; digest должен совпадать с manifest.
+6. Проверяет `./bootstrap.sh` на чистом Docker-хосте с пустым runtime, включая режим без host Python, и выпускает папку поставки с этими файлами.
+
+`stable.json` выбирается только для новой установки. Повторный bootstrap использует `runtime/release.json`; новая версия устанавливается отдельно командой update. Не менять уже выпущенные версии или migrations ради повторной публикации.
+
 ## Совместимость вкладок и pending
 
 Все запросы frontend несут `X-TraceWeave-Client-Contract`, защищённые запросы также expected account ID. Сохранённый pending удерживает точное тело, operationId, account и contract hash. При 503 он остаётся доступным для точного повтора, при смене аккаунта не отправляется от имени нового пользователя. Unsupported client получает 409 `client_upgrade_required` до мутации; черновик сохраняется. Смена сессии получает `account_changed`, восстановление требует прежнего аккаунта либо явного разбора черновиков.

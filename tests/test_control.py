@@ -86,6 +86,105 @@ class ControlTests(unittest.TestCase):
         control.write_json(path, value)
         return path
 
+    def fresh_bootstrap(self, *arguments):
+        for name in ["installation.json", "release.json", "operation.json", "journal.jsonl"]:
+            (self.runtime / name).unlink(missing_ok=True)
+        release = self.write_candidate(self.release)
+        return control.parser().parse_args(["bootstrap", "--release", str(release), *arguments])
+
+    @contextlib.contextmanager
+    def bootstrap_dependencies(self, owner):
+        with contextlib.ExitStack() as stack:
+            dependencies = {name: stack.enter_context(patch.object(control, name)) for name in
+                            ["ensure_images", "initialize_volumes", "caddy_config", "wait_services",
+                             "maintenance_check", "stop_backend", "ready", "reload_gateway", "unused_port", "execute"]}
+            def compose(*arguments, **keywords):
+                if arguments[-2:] == ("ops", "owner-state"):
+                    return json.dumps(owner)
+                return None
+            dependencies["compose"] = stack.enter_context(patch.object(control, "compose", side_effect=compose))
+            yield dependencies
+
+    def test_first_bootstrap_missing_stable_manifest_has_no_installation_volume_or_account_side_effects(self):
+        self.fresh_bootstrap()
+        with patch.object(control, "ROOT", self.runtime / "delivery"):
+            arguments = control.parser().parse_args(["bootstrap"])
+            self.assertEqual(Path(arguments.release), control.ROOT / "releases/stable.json")
+            with patch.object(control, "execute") as execute, patch.object(control, "compose") as compose, \
+                    patch.object(control, "initialize_volumes") as initialize, \
+                    patch.object(control, "unused_port") as port, patch.object(control, "bootstrap_text") as prompt:
+                with self.assertRaisesRegex(control.Failure, "stable.json.*отсутствует"):
+                    control.bootstrap(arguments)
+            for effect in [execute, compose, initialize, port, prompt]:
+                effect.assert_not_called()
+        for name in ["installation.json", "release.json", "operation.json", "journal.jsonl"]:
+            self.assertFalse((self.runtime / name).exists())
+
+    def test_first_owner_prompts_only_after_owner_state_and_passes_complete_create_arguments(self):
+        arguments = self.fresh_bootstrap()
+        values = iter(["   ", " owner@example.test ", " Owner Name "])
+        with self.bootstrap_dependencies({"count": 0, "withEmail": 0}) as dependencies:
+            def answer(prompt):
+                self.assertTrue(any(call.args[-2:] == ("ops", "owner-state") for call in dependencies["compose"].call_args_list))
+                return next(values)
+            with patch.object(control.sys.stdin, "isatty", return_value=True), \
+                    patch("builtins.input", side_effect=answer) as prompt:
+                control.bootstrap(arguments)
+        self.assertEqual(prompt.call_count, 3)
+        create = next(call for call in dependencies["compose"].call_args_list if "create" in call.args)
+        self.assertEqual(create.args, ("run", "--rm", "--no-deps", "owner", "account", "create",
+                                       "--email", "owner@example.test", "--name", "Owner Name"))
+        self.assertTrue(create.kwargs["interactive"])
+        self.assertEqual(create.kwargs["release"], self.release)
+        self.assertEqual(control.read_json(self.runtime / "operation.json")["phase"], "ready")
+
+    def test_repeat_ready_or_stopped_bootstrap_starts_saved_release_without_account_prompt(self):
+        for phase in ["ready", "stopped"]:
+            with self.subTest(phase=phase):
+                control.phase(phase, releaseId=self.release["releaseId"])
+                arguments = control.parser().parse_args(["bootstrap"])
+                with patch.object(control, "start") as start, patch.object(control, "compose") as compose, \
+                        patch.object(control, "bootstrap_text") as prompt, patch("builtins.input") as input_value:
+                    control.bootstrap(arguments)
+                start.assert_called_once_with()
+                compose.assert_not_called(); prompt.assert_not_called(); input_value.assert_not_called()
+                self.assertEqual(control.current(), self.release)
+
+    def test_first_owner_non_tty_missing_email_or_name_refuses_without_creating_account_or_opening_access(self):
+        variants = [("--email", ["--name", "Operator"]), ("--name", ["--email", "owner@example.test"])]
+        for missing, flags in variants:
+            with self.subTest(missing=missing):
+                arguments = self.fresh_bootstrap(*flags)
+                with self.bootstrap_dependencies({"count": 0, "withEmail": 0}) as dependencies, \
+                        patch.object(control.sys.stdin, "isatty", return_value=False), patch("builtins.input") as prompt:
+                    with self.assertRaisesRegex(control.Failure, missing):
+                        control.bootstrap(arguments)
+                prompt.assert_not_called()
+                self.assertFalse(any("create" in call.args for call in dependencies["compose"].call_args_list))
+                dependencies["ready"].assert_not_called(); dependencies["reload_gateway"].assert_not_called()
+                self.assertEqual(control.read_json(self.runtime / "operation.json")["phase"], "bootstrap-migrating")
+
+    def test_explicit_first_owner_fields_are_not_rewritten_or_prompted_when_controller_has_no_tty(self):
+        email, name = "Owner+Case@example.test", " Explicit Name "
+        arguments = self.fresh_bootstrap("--email", email, "--name", name)
+        with self.bootstrap_dependencies({"count": 0, "withEmail": 0}) as dependencies, \
+                patch.object(control.sys.stdin, "isatty", return_value=False), patch("builtins.input") as prompt:
+            control.bootstrap(arguments)
+        prompt.assert_not_called()
+        create = next(call for call in dependencies["compose"].call_args_list if "create" in call.args)
+        self.assertEqual(create.args[-4:], ("--email", email, "--name", name))
+        self.assertTrue(create.kwargs["interactive"])  # Backend still owns the hidden password TTY.
+
+    def test_first_owner_eof_is_a_graceful_refusal_before_account_creation_or_readiness(self):
+        arguments = self.fresh_bootstrap()
+        with self.bootstrap_dependencies({"count": 0, "withEmail": 0}) as dependencies, \
+                patch.object(control.sys.stdin, "isatty", return_value=True), \
+                patch("builtins.input", side_effect=EOFError):
+            with self.assertRaisesRegex(control.Failure, "Ввод первого аккаунта прерван"):
+                control.bootstrap(arguments)
+        self.assertFalse(any("create" in call.args for call in dependencies["compose"].call_args_list))
+        dependencies["ready"].assert_not_called(); dependencies["reload_gateway"].assert_not_called()
+
     def test_manifest_accepts_content_addressed_images_and_complete_contract_metadata(self):
         self.release["images"]["backend"] = "registry.example/traceweave/backend@sha256:" + "1" * 64
         self.assertEqual(control.manifest(self.write_candidate(self.release)), self.release)

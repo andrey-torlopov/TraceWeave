@@ -280,11 +280,26 @@ def configure_mail(a,config=None,release=None,bootstrap_only=False):
         ready(config,release);reload_gateway(config,release,False);phase('ready',releaseId=release['releaseId'])
         print('SMTP configured; registration '+('enabled' if a.enable_registration else 'disabled')+'.')
 
+def bootstrap_text(value,prompt,flag):
+    if value:return value
+    if not sys.stdin.isatty():raise Failure('Первый аккаунт: нужен терминал для ввода '+flag+'; либо передайте этот аргумент явно.')
+    try:
+        while True:
+            value=input(prompt).strip()
+            if value:return value
+            print('Введите непустое значение.')
+    except EOFError:raise Failure('Ввод первого аккаунта прерван. Повторите bootstrap в терминале.') from None
+
 def bootstrap(a):
     if (RUNTIME/'installation.json').exists():
         config=load_config();release=current()
         if config['origin']!=a.origin and a.origin!='http://127.0.0.1:8080':raise Failure('Existing installation origin is fixed; use a separate runtime for another installation.')
     else:
+        if Path(a.release)==ROOT/'releases/stable.json' and not Path(a.release).is_file():
+            raise Failure('Готовый релиз ещё не установлен: releases/stable.json отсутствует. '
+                          'Образы TraceWeave необходимо опубликовать вместе с этим манифестом. '
+                          'Для уже собранного локального релиза передайте путь к его манифесту через --release. '
+                          'Подробности: docs/local-use.md.')
         release=manifest(Path(a.release).resolve())
         origin=urlsplit(a.origin)
         if origin.path or origin.query or origin.fragment or origin.username or origin.password or origin.scheme not in ['http','https'] or not origin.hostname:raise Failure('Origin must be an HTTP(S) origin without a path.')
@@ -308,10 +323,11 @@ def bootstrap(a):
     phase('bootstrap-migrating');compose('run','--rm','-T','--no-deps','migrate',config=config,release=release)
     owner=json.loads(compose('run','--rm','-T','--no-deps','ops','owner-state',config=config,release=release,capture=True))
     if owner['count']==0:
-        if not a.email or not a.name:raise Failure('Первый аккаунт: повторите bootstrap с --email EMAIL --name NAME; пароль будет прочитан скрыто из TTY.')
+        a.email=bootstrap_text(a.email,'Email для входа: ','--email')
+        a.name=bootstrap_text(a.name,'Ваше имя: ','--name')
         phase('bootstrap-owner');compose('run','--rm','--no-deps','owner','account','create','--email',a.email,'--name',a.name,config=config,release=release,interactive=True)
     elif owner['count']!=owner['withEmail']:
-        if not a.email:raise Failure('Старому владельцу требуется email: bootstrap --email EMAIL. UUID и прежний пароль сохранятся.')
+        a.email=bootstrap_text(a.email,'Email старого владельца (UUID и пароль сохранятся): ','--email')
         compose('run','--rm','--no-deps','owner','account','attach-email','--email',a.email,config=config,release=release,interactive=True)
     phase('bootstrap-verifying');wait_services(['backend','frontend'],config,release);ready(config,release)
     reload_gateway(config,release,False);phase('ready',releaseId=release['releaseId'])
@@ -490,7 +506,7 @@ def build_source(a):
     write_json(path,value,0o644);print('Local immutable release: '+str(path))
 
 def parser():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['bootstrap','start','stop','restart','status','logs','backup','restore','update','rollback','resume','restore-revert','maintenance','configure-mail','account','build-source']);p.add_argument('extra',nargs='*');p.add_argument('--release',default=str(ROOT/'releases/docker-1.local.json'));p.add_argument('--release-id',default='docker-1');p.add_argument('--origin',default='http://127.0.0.1:8080');p.add_argument('--port',type=int);p.add_argument('--email');p.add_argument('--name');p.add_argument('--backup');p.add_argument('--yes',action='store_true');p.add_argument('--smtp-url');p.add_argument('--smtp-user');p.add_argument('--smtp-from');p.add_argument('--enable-registration',action='store_true');p.add_argument('--backend-path',default=str(ROOT.parent/'TraceWeaveBackend'));p.add_argument('--frontend-path',default=str(ROOT.parent/'TraceWeaveFrontend'));return p
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['bootstrap','start','stop','restart','status','logs','backup','restore','update','rollback','resume','restore-revert','maintenance','configure-mail','account','build-source']);p.add_argument('extra',nargs='*');p.add_argument('--release',default=str(ROOT/'releases/stable.json'));p.add_argument('--release-id',default='docker-1');p.add_argument('--origin',default='http://127.0.0.1:8080');p.add_argument('--port',type=int);p.add_argument('--email');p.add_argument('--name');p.add_argument('--backup');p.add_argument('--yes',action='store_true');p.add_argument('--smtp-url');p.add_argument('--smtp-user');p.add_argument('--smtp-from');p.add_argument('--enable-registration',action='store_true');p.add_argument('--backend-path',default=str(ROOT.parent/'TraceWeaveBackend'));p.add_argument('--frontend-path',default=str(ROOT.parent/'TraceWeaveFrontend'));return p
 
 def main():
     a=parser().parse_args()

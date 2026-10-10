@@ -8,6 +8,22 @@ if command -v python3 >/dev/null 2>&1; then
 fi
 # A Docker-only host can run the operator CLI in a short-lived tools container.
 # This explicitly invoked CLI needs operator-level access to the Docker socket.
+if [ -z "${TW_TOOLS_IMAGE:-}" ] && [ -f "$TW_SCRIPT_DIR/releases/tools-image.txt" ]; then
+  TW_TOOLS_IMAGE=
+  TW_TOOLS_EXTRA=
+  {
+    IFS= read -r TW_TOOLS_IMAGE || [ -n "$TW_TOOLS_IMAGE" ] || { echo 'Invalid published operator image reference: empty file.' >&2; exit 1; }
+    if IFS= read -r TW_TOOLS_EXTRA || [ -n "$TW_TOOLS_EXTRA" ]; then
+      echo 'Invalid published operator image reference: expected exactly one line.' >&2; exit 1
+    fi
+  } < "$TW_SCRIPT_DIR/releases/tools-image.txt"
+  TW_TOOLS_REPOSITORY=${TW_TOOLS_IMAGE%@sha256:*}
+  TW_TOOLS_DIGEST=${TW_TOOLS_IMAGE##*@sha256:}
+  case "$TW_TOOLS_IMAGE" in *@sha256:*) ;; *) echo 'Invalid published operator image reference.' >&2; exit 1;; esac
+  case "$TW_TOOLS_REPOSITORY" in ''|*[!a-zA-Z0-9._/:+-]*) echo 'Invalid published operator repository.' >&2; exit 1;; esac
+  case "$TW_TOOLS_DIGEST" in ''|*[!a-f0-9]*) echo 'Invalid published operator digest.' >&2; exit 1;; esac
+  [ "${#TW_TOOLS_DIGEST}" -eq 64 ] || { echo 'Invalid published operator digest length.' >&2; exit 1; }
+fi
 TW_TOOLS_IMAGE=${TW_TOOLS_IMAGE:-traceweave/tools:docker-1}
 if ! docker image inspect "$TW_TOOLS_IMAGE" >/dev/null 2>&1; then
   case "$TW_TOOLS_IMAGE" in
