@@ -223,40 +223,87 @@ def identities(operator, config, release):
     return result
 
 
-def guided_bootstrap(runtime):
-    require(integration.ROOT == ROOT and Path.cwd() == ROOT,
-            'Guided bootstrap must use the current harness checkout.')
+def checked_source(git, directory, revision):
+    require(Path(git).is_absolute() and re.fullmatch('[a-f0-9]{40}', revision) is not None,
+            'Source verification requires an absolute Git executable and exact commit.')
+    require(directory.is_dir() and not directory.is_symlink(), 'Source checkout must be a real directory.')
+    require(command(git, '-C', str(directory), 'rev-parse', '--show-toplevel') == str(directory.resolve()),
+            'Source directory must be the checkout root.')
+    require(command(git, '-C', str(directory), 'rev-parse', 'HEAD') == revision,
+            'Source checkout differs from the exact verified commit.')
+    require(not command(git, '-C', str(directory), 'status', '--porcelain', '--untracked-files=no'),
+            'Verified source checkout has modified tracked files.')
+
+
+def checkout_source(git, directory, revision):
+    require(Path(git).is_absolute() and re.fullmatch('[a-f0-9]{40}', revision) is not None,
+            'Source switch requires an absolute Git executable and exact commit.')
+    require(directory != ROOT and directory.is_dir() and not directory.is_symlink(),
+            'Only the separate synthetic legacy checkout may change revisions.')
+    require(command(git, '-C', str(directory), 'rev-parse', '--show-toplevel') == str(directory.resolve()),
+            'Synthetic source directory must be the checkout root.')
+    require(not command(git, '-C', str(directory), 'status', '--porcelain', '--untracked-files=no'),
+            'Synthetic checkout has modified tracked files; forced checkout is forbidden.')
+    command(git, '-C', str(directory), 'checkout', '--detach', revision)
+    checked_source(git, directory, revision)
+
+
+def guided_bootstrap(runtime, directory, git, revision):
+    checked_source(git, directory, revision)
+    require(integration.ROOT == directory and Path.cwd() == directory,
+            'Guided bootstrap must keep the original installation directory.')
     require(shutil.which('python3') is None and shutil.which('python') is None,
             'Host Python leaked onto guided bootstrap PATH.')
     require(os.environ['TW_RUNTIME_DIR'] == str(runtime), 'Guided bootstrap runtime differs.')
     log = runtime / ('integration-guided-bootstrap-' + integration.uid() + '.log')
     fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, 'w') as output:
-        result = subprocess.run([str(ROOT / 'bootstrap.sh'), '--yes'], cwd=ROOT,
+        result = subprocess.run([str(directory / 'bootstrap.sh'), '--yes'], cwd=directory,
                                 stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT)
     require(result.returncode == 0, 'Guided bootstrap failed. Inspect private ' + str(log))
     return log.read_text()
 
 
-def original_assets(owner, snapshots):
+def asset_inventory(operator, config, release):
+    # The published backend exposes asset detail/content, but no collection
+    # route. Enumerate all active assets, including unattached ones, privately
+    # through the marked synthetic owner's database in a read-only transaction.
+    script = """import importlib.util,json
+from pathlib import Path
+assert json.loads(Path('/state/synthetic-installation.json').read_text()) == {'synthetic':True,'email':'docker-owner@example.test'}
+spec=importlib.util.spec_from_file_location('ops','/opt/traceweave/ops.py')
+ops=importlib.util.module_from_spec(spec);spec.loader.exec_module(ops)
+c=ops.connect()
+c.autocommit=False
+try:
+ with c:
+  with c.cursor() as q:
+   q.execute('SET TRANSACTION READ ONLY')
+   q.execute('SELECT a.investigation_id::text,a.id::text FROM assets a JOIN investigations i ON i.id=a.investigation_id JOIN owners o ON o.id=i.owner_id WHERE o.email=%s AND a.deleted_at IS NULL ORDER BY a.investigation_id,a.id',('docker-owner@example.test',))
+   print(json.dumps([{'investigationId':row[0],'assetId':row[1]} for row in q.fetchall()],separators=(',',':')))
+finally:c.close()
+"""
+    return json.loads(operator.compose('run', '--rm', '-T', '--no-deps', '--entrypoint', 'python3', 'ops',
+                                       '-c', script, config=config, release=release, capture=True))
+
+
+def original_assets(owner, snapshots, operator, config, release):
     result = {}
-    for identifier, graph in snapshots.items():
+    for item in asset_inventory(operator, config, release):
+        identifier, asset = item['investigationId'], item['assetId']
+        require(identifier in snapshots, 'Synthetic asset inventory contains an investigation without a graph snapshot.')
+        graph = snapshots[identifier]
         path = '/api/v1/investigations/' + identifier
         active_nodes = {node['id'] for node in graph['nodes']}
-        assets = owner.json('GET', path + '/assets')
-        require(assets['nextCursor'] is None, 'Synthetic asset fixture unexpectedly exceeds one complete page.')
-        for asset in assets['items']:
-            document = owner.json('GET', path + '/assets/' + asset['id'])
-            original = owner.request('GET', path + '/assets/' + asset['id'] + '/content')[0]
-            metadata = {key: value for key, value in document.items() if key != 'revision'}
-            # Version 0.1.0 exposes usages on trashed nodes; 0.1.1 filters them.
-            # Compare immutable metadata and surviving usages against the active
-            # graph while the SQL check compares every deleted node/relation row.
-            metadata['attachments'] = [item for item in document['attachments'] if item['nodeId'] in active_nodes]
-            result[(identifier, asset['id'])] = {
-                'document': metadata,
-                'sha256': hashlib.sha256(original).hexdigest(),
-            }
+        document = owner.json('GET', path + '/assets/' + asset)
+        original = owner.request('GET', path + '/assets/' + asset + '/content')[0]
+        metadata = {key: value for key, value in document.items() if key != 'revision'}
+        # Version 0.1.0 exposes usages on trashed nodes; 0.1.1 filters them.
+        # Compare immutable metadata and surviving usages against the active
+        # graph while the SQL check compares every deleted node/relation row.
+        metadata['attachments'] = [item for item in document['attachments'] if item['nodeId'] in active_nodes]
+        require((identifier, asset) not in result, 'Synthetic asset inventory contains duplicate assets.')
+        result[(identifier, asset)] = {'document': metadata, 'sha256': hashlib.sha256(original).hexdigest()}
     return result
 
 
@@ -354,8 +401,13 @@ def verify(args, evidence):
     contract = hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest()
     require(contract == base['contractHash'] == selected['contractHash'], 'Harness differs from the published client contract.')
     evidence.update(source={'base': base['source'], 'candidate': candidate['source'], 'compatible': selected['source']})
+    git = shutil.which('git')
+    require(git is not None, 'Published verification requires Git before restricting operator PATH.')
+    git = str(Path(git).resolve())
+    tested_revision = command(git, '-C', str(ROOT), 'rev-parse', 'HEAD')
+    checked_source(git, ROOT, tested_revision)
     evidence['guidedOperator'] = {
-        'sourceRevision': command('git', '-C', str(ROOT), 'rev-parse', 'HEAD'),
+        'sourceRevision': tested_revision,
         'entrypoint': 'bootstrap.sh --yes', 'toolsImage': base['images']['tools'],
         'hostPythonOnOperatorPath': False,
     }
@@ -366,10 +418,11 @@ def verify(args, evidence):
     require(not runtime.exists() and not runtime.is_symlink(), 'Published update test requires a fresh runtime.')
     runtime.mkdir(parents=True, mode=0o700)
     origin = 'http://127.0.0.1:' + str(args.port)
+    legacy_root = Path(args.legacy).absolute()
     operator = None
     try:
         write_json(runtime / 'synthetic-installation.json', {'synthetic': True, 'email': integration.EMAIL})
-        operator = legacy_operator(Path(args.legacy).absolute(), runtime, base, selected)
+        operator = legacy_operator(legacy_root, runtime, base, selected)
         base_path = runtime / '0.1.0.json'
         selected_path = Path(args.output).absolute() / '0.1.1-update.json'
         write_json(base_path, base)
@@ -443,19 +496,24 @@ def verify(args, evidence):
         evidence['checks']['rollback_preserves_new_data_session_database'] = 'passed'
 
         # The preceding cycle remains entirely on the unmodified 0.1.0
-        # operator. Now exercise the checked-out guided entrypoint while its
-        # Python interpreter and ops dependency still come from tools:0.1.0.
+        # operator. Switch that synthetic checkout to the tested commit, as an
+        # in-place git pull would: relative Compose bind sources must keep their
+        # original absolute paths. Interpreter and ops still use tools:0.1.0.
         evidence['activeCheck'] = 'guided_bootstrap_update'
-        originals = original_assets(owner, snapshots)
+        originals = original_assets(owner, snapshots, operator, config, base)
         guided_prepared = prepare_batch(owner, path, 'guided bootstrap 0.1.1')
         backups_before = set((runtime / 'backups').iterdir())
-        legacy_root = integration.ROOT
         try:
-            integration.ROOT = ROOT
-            os.chdir(ROOT)
+            require(strict((runtime / 'synthetic-installation.json').read_bytes()) ==
+                    {'synthetic': True, 'email': integration.EMAIL}, 'Unmarked synthetic source switch refused.')
+            checked_source(git, legacy_root, base['source']['delivery'])
+            # Local object transfer only; --update-shallow supports both Actions
+            # checkouts without fetching a remote or changing published tags.
+            command(git, '-C', str(legacy_root), 'fetch', '--no-tags', '--update-shallow', str(ROOT), tested_revision)
+            checkout_source(git, legacy_root, tested_revision)
             require(os.environ['TW_TOOLS_IMAGE'] == base['images']['tools'],
                     'Guided bootstrap must retain the published 0.1.0 tools image.')
-            guided_bootstrap(runtime)
+            guided_bootstrap(runtime, legacy_root, git, tested_revision)
             guided_selected = operator.current()
             require(guided_selected == checked_update and operator.load_config() == config,
                     'Guided bootstrap did not select the checked-in compatible update or changed installation configuration.')
@@ -465,7 +523,7 @@ def verify(args, evidence):
             require(all(guided_running[key][0] != rolled_back[key][0] for key in ['backend', 'frontend']),
                     'Guided bootstrap did not replace both application containers.')
             preserved(owner, fixture, cookie, csrf, account)
-            require(original_assets(owner, snapshots) == originals,
+            require(original_assets(owner, snapshots, operator, config, guided_selected) == originals,
                     'Guided bootstrap changed an existing original, asset metadata or surviving attachment usage.')
             require(owner.request('GET', entry.group(1))[0] == old_asset,
                     'Guided bootstrap lost the original pending client asset.')
@@ -493,7 +551,7 @@ def verify(args, evidence):
             guided_snapshots = {identifier: owner.json('GET', '/api/v1/investigations/' + identifier + '/graph')
                                 for identifier in snapshots}
             backups_after = set((runtime / 'backups').iterdir())
-            repeated_output = guided_bootstrap(runtime)
+            repeated_output = guided_bootstrap(runtime, legacy_root, git, tested_revision)
             require('Доступно обновление:' not in repeated_output and 'Обновить сейчас?' not in repeated_output,
                     'Repeated guided bootstrap offered an already installed update.')
             require(operator.current() == guided_selected and operator.load_config() == config,
@@ -503,7 +561,7 @@ def verify(args, evidence):
             require(set((runtime / 'backups').iterdir()) == backups_after,
                     'Repeated guided bootstrap unexpectedly created another update backup.')
             preserved(owner, fixture, cookie, csrf, account)
-            require(original_assets(owner, guided_snapshots) == originals,
+            require(original_assets(owner, guided_snapshots, operator, config, guided_selected) == originals,
                     'Repeated guided bootstrap changed existing originals or asset metadata.')
             require(owner.request('GET', entry.group(1))[0] == old_asset,
                     'Repeated guided bootstrap lost the original pending client asset.')
@@ -514,6 +572,7 @@ def verify(args, evidence):
                     'Repeated guided bootstrap changed stored node/relation tombstones.')
             evidence['checks']['guided_bootstrap_update'] = 'passed'
         finally:
+            checkout_source(git, legacy_root, base['source']['delivery'])
             integration.ROOT = legacy_root
             os.chdir(legacy_root)
 
@@ -533,7 +592,7 @@ def verify(args, evidence):
                     'Original operator rollback lost graph data written after guided bootstrap.')
         require(tombstones(operator, config, base) == deleted,
                 'Original operator rollback lost stored node/relation tombstones after guided bootstrap.')
-        require(original_assets(owner, guided_snapshots) == originals,
+        require(original_assets(owner, guided_snapshots, operator, config, base) == originals,
                 'Original operator rollback changed immutable originals or asset metadata after guided bootstrap.')
         require(owner.request('GET', entry.group(1))[0] == old_asset,
                 'Original operator rollback lost the original pending client asset after guided bootstrap.')
@@ -543,6 +602,7 @@ def verify(args, evidence):
     finally:
         if operator is not None:
             try:
+                checked_source(git, legacy_root, base['source']['delivery'])
                 evidence['checks']['marked_cleanup_retains_volumes'] = safe_cleanup(runtime, operator, origin)
             except Exception:
                 evidence['checks']['marked_cleanup_retains_volumes'] = 'failed'
@@ -600,40 +660,67 @@ def self_test():
         raise AssertionError('Operationally different guided update fixture was accepted.')
     require(len(EXPECTED_CHECKS) == 9 and {'guided_bootstrap_update', 'guided_bootstrap_rollback'} <= EXPECTED_CHECKS,
             'Native evidence does not require both guided bootstrap checks.')
+    class InventoryFixture:
+        def __init__(self, include_unattached=True):
+            self.include_unattached = include_unattached
+
+        def compose(self, *args, **kwargs):
+            require(args[:-1] == ('run', '--rm', '-T', '--no-deps', '--entrypoint', 'python3', 'ops', '-c') and
+                    kwargs == {'config': {}, 'release': base, 'capture': True}, 'Unexpected private inventory execution.')
+            script = args[-1]
+            compile(script, '<synthetic-inventory>', 'exec')
+            rows = [{'investigationId': 'investigation', 'assetId': 'asset'}]
+            if self.include_unattached:
+                rows.append({'investigationId': 'investigation', 'assetId': 'orphan'})
+            return json.dumps(rows)
+
     class OriginalFixture:
         def __init__(self, document, content=b'Synthetic immutable original.'):
             self.document = document
             self.content = content
 
         def json(self, method, path):
-            require(method == 'GET', 'Asset self-test unexpectedly wrote data.')
-            return {'items': [{'id': 'asset'}], 'nextCursor': None} if path.endswith('/assets') else self.document
+            require(method == 'GET' and path in ['/api/v1/investigations/investigation/assets/asset',
+                                                '/api/v1/investigations/investigation/assets/orphan'],
+                    'Asset self-test used an unsupported collection route or wrote data.')
+            if path.endswith('/orphan'):
+                return {'revision': 3, 'asset': {'id': 'orphan', 'title': 'Unattached original'},
+                        'attachments': [], 'evidence': [], 'available': True, 'previewAllowed': False}
+            return self.document
 
         def request(self, method, path):
-            require(method == 'GET' and path.endswith('/content'), 'Unexpected asset self-test request.')
-            return self.content, {}
+            require(method == 'GET' and path in ['/api/v1/investigations/investigation/assets/asset/content',
+                                                '/api/v1/investigations/investigation/assets/orphan/content'],
+                    'Unexpected asset self-test request.')
+            return (b'Synthetic unattached original.' if '/orphan/' in path else self.content), {}
 
     legacy_document = {'revision': 3, 'asset': {'id': 'asset', 'title': 'Retained original'},
                        'attachments': [{'nodeId': 'active', 'caption': 'Surviving usage'},
                                        {'nodeId': 'deleted', 'caption': 'Trash usage'}],
                        'evidence': [], 'available': True, 'previewAllowed': False}
     graph = {'investigation': {'nodes': [{'id': 'active'}]}}
+    inventory = InventoryFixture()
     before_asset = copy.deepcopy(legacy_document)
-    originals = original_assets(OriginalFixture(legacy_document), graph)
+    originals = original_assets(OriginalFixture(legacy_document), graph, inventory, {}, base)
+    require(set(originals) == {('investigation', 'asset'), ('investigation', 'orphan')} and
+            originals[('investigation', 'orphan')]['document']['attachments'] == [],
+            'Asset comparison omitted the unattached original from the full active inventory.')
     current_document = copy.deepcopy(legacy_document)
     current_document['revision'] = 4
     current_document['attachments'] = current_document['attachments'][:1]
     require(legacy_document == before_asset and
-            original_assets(OriginalFixture(current_document), graph) == originals,
+            original_assets(OriginalFixture(current_document), graph, inventory, {}, base) == originals,
             'Asset comparison modified data or treated the corrected active-usage projection as data loss.')
     for mutate in [lambda value: value['asset'].update(title='Changed metadata'),
                    lambda value: value['attachments'][0].update(caption='Changed surviving usage')]:
         changed = copy.deepcopy(current_document)
         mutate(changed)
-        require(original_assets(OriginalFixture(changed), graph) != originals,
+        require(original_assets(OriginalFixture(changed), graph, inventory, {}, base) != originals,
                 'Asset comparison ignored changed metadata or surviving usage.')
-    require(original_assets(OriginalFixture(current_document, b'Changed original bytes.'), graph) != originals,
+    require(original_assets(OriginalFixture(current_document, b'Changed original bytes.'), graph, inventory, {}, base) != originals,
             'Asset comparison ignored changed immutable original bytes.')
+    require(original_assets(OriginalFixture(current_document), graph, InventoryFixture(False), {}, base) != originals,
+            'Asset comparison ignored a missing unattached original.')
     mutations = [
         lambda value: value['migrations'][0].update(sha256='0' * 64),
         lambda value: value.update(contractHash='0' * 64, backendContractHash='0' * 64, supportedClientContractHashes=['0' * 64]),
