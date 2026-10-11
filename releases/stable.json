@@ -1,22 +1,23 @@
 {
   "formatVersion": 1,
-  "releaseId": "0.1.4",
-  "frontendReleaseId": "0.1.4",
-  "frontendVersion": "0.1.4",
-  "backendVersion": "0.1.4",
-  "backendContractHash": "5b9da16997f94c15dd952224292961c2de8f90b31a12e0ff4d14da89a6048281",
+  "releaseId": "0.1.6",
+  "frontendReleaseId": "0.1.6",
+  "frontendVersion": "0.1.6",
+  "backendVersion": "0.1.6",
+  "backendContractHash": "489ebec910e10c88715e1d1906ddd6614cedb6dcfbe43844f3e4ca4ee0a22852",
   "images": {
-    "backend": "docker.io/andreytorlopov/traceweave-backend:0.1.4@sha256:3418347696da2a49413933aa9cfaa5f0fab55cde7c6f4053a64d6549784fc92a",
-    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.1.4@sha256:a4829699f357fa301d5aa2e6073d0edbabd529c880f0fcea81a2e14c11e1462c",
-    "tools": "docker.io/andreytorlopov/traceweave-tools:0.1.4@sha256:23995c6a4ba17e2735c45f402dde910bf741911908e2695bbf276a2f52ee661b",
-    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.1.4@sha256:1861615814cdb2eca20ab0a7db994e91d9aa31b021051fc41f3db01ece0764f6",
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.1.6@sha256:f16dc7e27e8cfb153c80051d09c9e54aeb5a11ba7b0b0fe08235429d77f62152",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.1.6@sha256:0f42aa8bcb5d55b8a16d85683f5171f74a63ed15c9350c68be03f7cbef6271e1",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.1.6@sha256:17871f3ea6ca11610fa48cbf8898a6668f9406a0408d6a46bed39e131b5628b7",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.1.6@sha256:873352852b9c941892db7a8c342e79bff8e0df50afd7b9495204c2824b0c2b65",
     "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
   },
   "postgresMajor": 18,
-  "contractHash": "5b9da16997f94c15dd952224292961c2de8f90b31a12e0ff4d14da89a6048281",
+  "contractHash": "489ebec910e10c88715e1d1906ddd6614cedb6dcfbe43844f3e4ca4ee0a22852",
   "supportedClientContractHashes": [
-    "5b9da16997f94c15dd952224292961c2de8f90b31a12e0ff4d14da89a6048281",
-    "bd1c6ed182bbd63e91401bc7018593a92b76682c62c498a35a928e7dd26f832c"
+    "489ebec910e10c88715e1d1906ddd6614cedb6dcfbe43844f3e4ca4ee0a22852",
+    "bd1c6ed182bbd63e91401bc7018593a92b76682c62c498a35a928e7dd26f832c",
+    "5b9da16997f94c15dd952224292961c2de8f90b31a12e0ff4d14da89a6048281"
   ],
   "migrations": [
     {
@@ -46,6 +47,14 @@
     {
       "version": 7,
       "sha256": "7164070e645dbd0172b722de5d7fbeaf2c4a976d628f71e939e9bad9efa8544e"
+    },
+    {
+      "version": 8,
+      "sha256": "2e540dbd4b04d39dc7187393611dbd19142e4770c4180296f537f376e2d64c45"
+    },
+    {
+      "version": 9,
+      "sha256": "b1c43ecc34ff5769ef9c5fb4df6b131900454246f05ed6badd8452a55e5d45e8"
     }
   ],
   "platforms": [
@@ -53,13 +62,13 @@
     "linux/arm64"
   ],
   "source": {
-    "backend": "67d9c5b4ab3650d9aa0aab0d52e503252fe4b545",
-    "frontend": "361a551f78464d2a2103a86bf35a97f58bc67d7b",
+    "backend": "1667f2a37a69f375634051aa5358a324bf66f21e",
+    "frontend": "9d676a302c5a6f29da439139bb82686529de90f6",
     "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "delivery": "a7fc8a0b393ff3c859d917c72ff87e875ec669fd",
+    "delivery": "53a9faa20e3cf7b7bf6d98c19ca8e449202dd37f",
     "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
-  "validation": "Native amd64/arm64 publication, anonymous clean-host HTTP/HTTPS/accounts and ten guided updates from 0.1.0, 0.1.1 and all three 0.1.3 infrastructure selections passed. New graph-settings JavaScript, old pending-client replay, originals, same-schema image rollback and backup restore verified. Publication: https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38128690147; clean host: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38129935726; application update: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38129937982.",
+  "validation": "Native amd64/arm64 publication, anonymous clean-host HTTP/HTTPS/accounts and eighteen guided updates from nine published baselines passed. Arbitrary/PDF/empty/repeated files, native downloads, raw/readable exports, exact pending-client replay, schema rollback refusal and two-way backup recovery verified. Publication: https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38148083930; clean host: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38150048960; application update: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38150050904.",
   "rollback": "same migration history only; otherwise restore verified backup"
 }

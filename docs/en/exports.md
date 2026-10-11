@@ -2,9 +2,9 @@
 
 *[Русский](../ru/exports.md)*
 
-Prepared for version 0.1.5. Available published distributions are listed in the [release guide](releases.md).
+Available in [release 0.1.6](releases.md).
 
-The Export button opens two actions:
+The Export button opens two actions; on a narrow screen they appear in the investigation actions menu:
 
 - **Save raw data** — the existing ZIP with separate Markdown documents, attachments and technical metadata. Open the extracted folder in Obsidian.
 - **Export report** — a ZIP containing one `report.md` file and an `Attachments` folder with original files.
@@ -17,7 +17,7 @@ Choose a format and select Create ZIP. The application saves documents and compl
 
 Both formats include all active documents and relations, regardless of search, selection or collapsed groups, together with attached files and source materials in use. Trash and historical snapshots are excluded. Use [backup](operations.md) to preserve the full installation.
 
-The archive reflects the saved state when requested. Later card edits do not change an existing report; create a new archive to include new data. The download is available for 24 hours. A missing or damaged original causes an export error.
+The archive reflects the saved state when requested. Later card edits do not change an existing report; create a new archive to include new data. The download is available for 24 hours. Restoring a backup invalidates existing export jobs; create a new ZIP from the restored documents. A missing or damaged original causes an export error.
 
 ---
 

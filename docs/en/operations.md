@@ -23,7 +23,7 @@ Maintenance temporarily closes access. Wait for completion and retain browser dr
 ./traceweave.sh backup
 ```
 
-The application enters maintenance, consistently copies the database and originals, verifies the copy and resumes work. A completed backup lives in the printed directory under `runtime/backups/`. Confirm completion and copy the **entire directory** to separate protected storage.
+The application enters maintenance, consistently copies the database and originals, verifies the copy and resumes work. Version 0.1.6 includes arbitrary-file and PDF originals, including empty files, with the same path and checksum checks as media. A completed backup lives in the printed directory under `runtime/backups/`. Confirm completion and copy the **entire directory** to separate protected storage.
 
 Backup includes every account and private authentication records. TraceWeave does not encrypt it; use encryption and restricted access. Separately preserve private `runtime/secrets/`, `installation.json`, `release.json` and the matching delivery files. Never put them in Git, webroot or shared export directories. See [storage and trust boundaries](data-and-security.md).
 
@@ -39,6 +39,14 @@ IFS= read -r TW_BACKUP_NAME
 ```
 
 Restore asks for confirmation, creates a safety backup of current state and new database/files volumes. Old volumes remain. Allow space for both copies and new storage. Sign in again after successful restore. Later records remain in the earlier volumes/safety backup; they are not automatically merged with the chosen older snapshot.
+
+Restore verifies the selected backup with the tools version pinned in that backup’s release manifest. Its exact image reference must already be known from the installed or previous release, or from a valid manifest in the local `releases/` catalog. If the CLI reports unknown backup tools, update the delivery checkout or add the matching reviewed release manifest from the official release. Backup metadata alone does not authorize running an unfamiliar image with access to your data.
+
+Keep the updated delivery scripts and release catalog when restoring an older backup. They allow a later restore of the newer safety backup with its matching tools, including schema-9 arbitrary files. Each restore switches the application and database to the selected snapshot; it does not merge newer records into an older database.
+
+In 0.1.6, interrupted upload/export/import jobs remain readable after restore, including older stored error records. An old export reports that its ZIP is unavailable and must be recreated. This fixes the restore defect that prevented promotion of 0.1.5.
+
+Ready-made export ZIPs are temporary and are not part of backup. After restore, previous export jobs are unavailable; create fresh raw-data or readable-report ZIPs from the restored investigation. After upgrading to schema 9, image-only rollback to schema 7 is refused. Use a compatible fixing release or restore the verified pre-update backup into new volumes.
 
 ## Interrupted Operations
 

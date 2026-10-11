@@ -3,8 +3,8 @@
 *[Русский](../ru/features.md)*
 
 - Graph investigations with documents, attributes, relations, search and editing.
-- Image/audio/video attachments, supported media preview and original downloads.
-- Markdown and attachment ZIP export for Obsidian.
+- [Arbitrary file attachments](attachments.md), including PDFs; supported image/audio/video preview and original downloads.
+- [Raw Markdown/attachment ZIP export for Obsidian or one readable report](exports.md).
 - Local Docker installation or your own HTTPS server; email/password sign-in.
 - Managed updates, maintenance and backup/restore to new storage.
 
@@ -14,9 +14,7 @@ Two documents can have multiple relations, including identical ones. Drawing a c
 
 The gear button, “Graph settings”, beside the zoom controls sets how many times a card must shrink before becoming a compact node. Use an integer from 2 to 10; the default is 3. With 5, cards remain visible above 20% zoom and become nodes at 20% or below. Invalid input restores the current value with an explanation. Apply saves the setting; Cancel leaves it unchanged. The setting belongs to this investigation in the current browser and does not change documents or relations.
 
-The sources prepared for the next version, 0.1.5, add [arbitrary files and attachments](attachments.md): documents, PDFs and other files up to 512 MiB.
-
-They also add an [export choice between raw data and a single readable report](exports.md).
+Version 0.1.6 accepts files up to 512 MiB, subject to the installation limit. Selecting the same file again creates an independent attachment. PDFs download for viewing in another application. The export menu offers raw data or a ZIP with one `report.md` and its originals.
 
 ---
 

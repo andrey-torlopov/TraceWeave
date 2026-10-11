@@ -1,13 +1,20 @@
 # Changelog
 
-## 0.1.5 — publication candidate — 2026-10-11
+## 0.1.6 — 2026-10-11
 
-- Prepare backend/frontend/delivery 0.1.5 for publication; registry acceptance and stable promotion are pending.
-- Extend OpenAPI to 1.3.0 and the schema to migration 9 for arbitrary files and readable reports.
-- Preserve reviewed client contracts for old pending requests; prepare update acceptance from the existing published baselines.
-- Document PDF download fallback, readable reports and recovery requirements after the schema migration.
-- Include arbitrary-file originals in backup, verification and restore; reject unsafe paths and corrupted contents.
-- Upgrade backup tools explicitly with the application/schema while retaining PostgreSQL and gateway; recover newer safety backups after restoring an earlier release.
+- Attach arbitrary files, including PDFs and empty files; repeated uploads create independent materials and attachments with unchanged original bytes.
+- Download generic files by their original name; PDFs open through download. Fix authenticated media previews and native original downloads.
+- Add a choice between raw data for Obsidian and one readable Markdown report with its original attachments, built from an immutable capture.
+- Extend OpenAPI to 1.3.0 and apply additive migrations 8–9; retain reviewed client contracts for exact replay of earlier prepared requests.
+- Include arbitrary-file originals in backup, verification and restore while retaining strict path and checksum validation.
+- Update backup tools with the application/schema through four compatible infrastructure manifests; retain PostgreSQL and gateway.
+- Recover newer safety backups after restoring an earlier release, using trusted tools from installed history or the local release catalog. Refuse image-only rollback to an older database schema.
+- Write complete interrupted-job errors during restore and read historical errors that omitted the field list; restored export jobs remain readable. Keep strict validation for malformed field values.
+
+## 0.1.5 — not promoted
+
+- Preserve published immutable tags and images. Native publication and anonymous registry checks passed, but all 18 application-update cases failed while reading an export job after safety-backup restore.
+- The incomplete stored error omitted `fields`, causing the backend decoder to fail. Release 0.1.6 corrects the defect. Stable remained 0.1.4 while the correction was prepared. See the [candidate record](releases/0.1.5-preparation.md).
 
 ## 0.1.4 — 2026-10-11
 
