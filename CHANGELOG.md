@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 — 2026-10-11
+
+- Add graph settings beside zoom controls with an integer card shrink factor from 2 to 10 (default 3); 5 switches to compact nodes at 20% zoom and below.
+- Restore the saved value after invalid input; persist per-investigation view preferences without changing documents, relations or revision.
+- Select exact compatible update manifests for retained 0.1.0, 0.1.1 and 0.1.3 infrastructure.
+- Keep the API and migration history unchanged from 0.1.3; verify same-schema image rollback and backup restore on native amd64/arm64.
+
 ## 0.1.3 — 2026-10-11
 
 - Allow parallel relations, including identical type/direction/label pairs, while preserving separate IDs and idempotent commands.

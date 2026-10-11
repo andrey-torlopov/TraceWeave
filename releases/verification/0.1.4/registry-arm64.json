@@ -1,0 +1,51 @@
+{
+  "releaseId": "0.1.4",
+  "deliveryTag": "v0.1.4",
+  "source": {
+    "backend": "67d9c5b4ab3650d9aa0aab0d52e503252fe4b545",
+    "frontend": "361a551f78464d2a2103a86bf35a97f58bc67d7b",
+    "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "delivery": "a7fc8a0b393ff3c859d917c72ff87e875ec669fd",
+    "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "images": {
+    "backend": {
+      "reference": "docker.io/andreytorlopov/traceweave-backend:0.1.4@sha256:3418347696da2a49413933aa9cfaa5f0fab55cde7c6f4053a64d6549784fc92a",
+      "imageId": "sha256:4901e6856efd67fcf5d1eed5bd9a649d311f057b1beecadc5d4501c9fbcdca50",
+      "platform": "linux/arm64"
+    },
+    "frontend": {
+      "reference": "docker.io/andreytorlopov/traceweave-frontend:0.1.4@sha256:a4829699f357fa301d5aa2e6073d0edbabd529c880f0fcea81a2e14c11e1462c",
+      "imageId": "sha256:1dca65082335bed9cedf027aad0bea1e67e2e2b79732f42233a85d45b8a482e3",
+      "platform": "linux/arm64"
+    },
+    "tools": {
+      "reference": "docker.io/andreytorlopov/traceweave-tools:0.1.4@sha256:23995c6a4ba17e2735c45f402dde910bf741911908e2695bbf276a2f52ee661b",
+      "imageId": "sha256:e131490911b7974743378d527e81fac8a2b38d89b020b74eacf619e32c1733e1",
+      "platform": "linux/arm64"
+    },
+    "gateway": {
+      "reference": "docker.io/andreytorlopov/traceweave-gateway:0.1.4@sha256:1861615814cdb2eca20ab0a7db994e91d9aa31b021051fc41f3db01ece0764f6",
+      "imageId": "sha256:f20d5e2372c7ba0be5bb6d4dcfddc2f49fa2e3caf5b197bd5a3ccfee46f8e9e3",
+      "platform": "linux/arm64"
+    },
+    "postgres": {
+      "reference": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c",
+      "imageId": "sha256:1f1c66e06b20326e8605215d3033d79e67a1341a46138ab8439e08cb58c231bc",
+      "platform": "linux/arm64"
+    }
+  },
+  "anonymousPull": true,
+  "nativePlatform": "linux/arm64",
+  "checks": {
+    "pull": "success",
+    "http": "success",
+    "https": "success",
+    "cleanup": "success"
+  },
+  "conclusion": "passed",
+  "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38129935726",
+  "operator": "real traceweave.sh bootstrap and lifecycle via published tools; no host Python on operator PATH; absolute host Python is only the HTTP/PTY test driver",
+  "data": "isolated marked synthetic runtimes; cleanup retains every volume"
+}
