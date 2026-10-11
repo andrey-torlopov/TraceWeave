@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8 — 2026-10-11 (publication candidate)
+
+- Deliver the multiple-attachment preview switcher with unchanged API 1.3.0 and schema 10.
+- Preserve existing tools for same-schema 0.1.7 updates and verify all published baseline variants, including image rollback.
+
 ## 0.1.7 — 2026-10-11
 
 - Deliver the «Улика» evidence type for new and existing investigations with additive migration 10.

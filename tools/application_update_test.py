@@ -18,7 +18,7 @@ from tools import control, integration
 from tools import published_update_test as previous
 from tools.update_integration import prepare_batch, apply_prepared_and_edit
 require = integration.require
-TARGET_VERSION = '0.1.7'
+TARGET_VERSION = '0.1.8'
 TARGET_SCHEMA = 10
 BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'),
          'retained': ('0.1.3-update.json', '0.1.3'), 'full': ('0.1.3.json', '0.1.3'),
@@ -31,7 +31,18 @@ BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'
          'v016-infra-v010': ('0.1.6-update-infra-0.1.0.json', '0.1.6'),
          'v016-infra-v011': ('0.1.6-update-infra-0.1.1.json', '0.1.6'),
          'v016-infra-v013': ('0.1.6-update-infra-0.1.3.json', '0.1.6'),
-         'v016-infra-v014': ('0.1.6-update-infra-0.1.4.json', '0.1.6')}
+         'v016-infra-v014': ('0.1.6-update-infra-0.1.4.json', '0.1.6'),
+         'v017-update-from-0.1.6-infra-0.1.0': ('0.1.7-update-from-0.1.6-infra-0.1.0.json', '0.1.7'),
+         'v017-update-from-0.1.6-infra-0.1.1': ('0.1.7-update-from-0.1.6-infra-0.1.1.json', '0.1.7'),
+         'v017-update-from-0.1.6-infra-0.1.3': ('0.1.7-update-from-0.1.6-infra-0.1.3.json', '0.1.7'),
+         'v017-update-from-0.1.6-infra-0.1.4': ('0.1.7-update-from-0.1.6-infra-0.1.4.json', '0.1.7'),
+         'v017-update-infra-0.1.0': ('0.1.7-update-infra-0.1.0.json', '0.1.7'),
+         'v017-update-infra-0.1.1': ('0.1.7-update-infra-0.1.1.json', '0.1.7'),
+         'v017-update-infra-0.1.3': ('0.1.7-update-infra-0.1.3.json', '0.1.7'),
+         'v017-update-infra-0.1.4': ('0.1.7-update-infra-0.1.4.json', '0.1.7'),
+         'v017-update-infra-0.1.6': ('0.1.7-update-infra-0.1.6.json', '0.1.7'),
+         'v017-full': ('0.1.7.json', '0.1.7'),
+         }
 CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
           'guided_automatic_backup_migration', 'graph_settings_frontend_asset', 'old_pending_relation_exact_replay',
           'parallel_four_directions_and_isolated_deletion', 'files_and_reports_after_update', 'evidence_type_existing_and_new', 'repeat_bootstrap',
@@ -42,8 +53,8 @@ CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
 def compatible(base, candidate):
     previous.published_manifest(candidate, TARGET_VERSION)
     control.validate_manifest(base)
-    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4', '0.1.6'], 'Expected previous application pair.')
-    require(len(base['migrations']) in [6, 7, 9] and len(candidate['migrations']) == TARGET_SCHEMA and
+    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4', '0.1.6', '0.1.7'], 'Expected previous application pair.')
+    require(len(base['migrations']) in [6, 7, 9, 10] and len(candidate['migrations']) == TARGET_SCHEMA and
             candidate['migrations'][:len(base['migrations'])] == base['migrations'], 'Existing migration history must be preserved.')
     feature_migrations = [{'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()}
                           for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql'), (10, '0010-evidence-node-type.sql')]]
@@ -53,10 +64,18 @@ def compatible(base, candidate):
         result['images'][key] = base['images'][key]
     for key in ['delivery', 'deliveryDiffHash']:
         result['source'][key] = base['source'][key]
-    result['source']['tools'] = candidate['source']['delivery']
-    result['source']['toolsDiffHash'] = candidate['source']['deliveryDiffHash']
-    result['toolsUpgrade'] = {'from': base['images']['tools'], 'to': candidate['images']['tools']}
-    result['validation'] = 'Published ' + TARGET_VERSION + ' applications and tools with retained gateway/database; native application-update acceptance required.'
+    if base['migrations'] == candidate['migrations']:
+        # An application-only release keeps the exact existing backup tools.
+        # Tools upgrades remain gated on a coordinated append-only schema change.
+        result['images']['tools'] = base['images']['tools']
+        for key in ['tools', 'toolsDiffHash']:
+            if key in base['source']:
+                result['source'][key] = base['source'][key]
+    else:
+        result['source']['tools'] = candidate['source']['delivery']
+        result['source']['toolsDiffHash'] = candidate['source']['deliveryDiffHash']
+        result['toolsUpgrade'] = {'from': base['images']['tools'], 'to': candidate['images']['tools']}
+    result['validation'] = 'Published ' + TARGET_VERSION + ' applications with retained gateway/database and schema-compatible tools; native application-update acceptance required.'
     control.validate_update(base, result)
     return result
 
