@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       candidate_json:
-        description: Complete 0.1.5 candidate.json from successful full publication
+        description: Complete 0.1.6 candidate.json from successful full publication
         type: string
         required: true
 permissions:
   contents: read
 concurrency:
-  group: published-update-${{ github.repository }}-0.1.5
+  group: published-update-${{ github.repository }}-0.1.6
   cancel-in-progress: false
 defaults:
   run:
@@ -159,6 +159,6 @@ jobs:
           name: application-update-${{ matrix.arch }}-${{ matrix.base }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/published-update-evidence/verification.json
-            ${{ runner.temp }}/published-update-evidence/0.1.5-update*.json
+            ${{ runner.temp }}/published-update-evidence/0.1.6-update*.json
           retention-days: 90
           if-no-files-found: error

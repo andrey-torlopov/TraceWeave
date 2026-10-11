@@ -9,6 +9,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import subprocess
 import sys
@@ -16,6 +17,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
+from jsonschema import Draft202012Validator
 
 sys.dont_write_bytecode = True
 TOOLS = Path(__file__).resolve().parents[1] / "tools"
@@ -487,6 +489,25 @@ class OpsTests(unittest.TestCase):
         self.assertGreater(statements.index("COMMIT"), statements.index("DELETE FROM account_tokens"))
         self.assertTrue(connection.closed)
         self.assertEqual([call.args[0] for call in self.disk_usage.call_args_list], [self.data, self.database_capacity])
+
+    def test_restored_job_errors_follow_the_shared_api_failure_contract(self):
+        connection = FakeConnection()
+        stack, _ = self.restore_patches(connection)
+        with stack:
+            ops.restore(self.name)
+        specification = json.loads((TOOLS.parent / "contracts/openapi.yaml").read_text())
+        validator = Draft202012Validator({"$ref": "#/components/schemas/JobFailure",
+                                          "components": specification["components"]})
+        statements = [statement for statement, _ in connection.statements]
+        for table, code in [("upload_tickets", "upload_interrupted"), ("export_jobs", "export_interrupted"),
+                            ("import_jobs", "import_interrupted")]:
+            with self.subTest(table=table):
+                updates = [statement for statement in statements if statement.startswith("UPDATE " + table + " ")]
+                self.assertEqual(len(updates), 1)
+                error = json.loads(re.search(r"error='(.*?)'::jsonb", updates[0]).group(1))
+                validator.validate(error)
+                self.assertEqual(error["code"], code)
+                self.assertEqual(error["fields"], [])
 
     def test_restore_rejects_existing_database_before_dump_or_original_mutation(self):
         connection = FakeConnection(table_count=1)

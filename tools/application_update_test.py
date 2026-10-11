@@ -18,7 +18,7 @@ from tools import control, integration
 from tools import published_update_test as previous
 from tools.update_integration import prepare_batch, apply_prepared_and_edit
 require = integration.require
-TARGET_VERSION = '0.1.5'
+TARGET_VERSION = '0.1.6'
 TARGET_SCHEMA = 9
 BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'),
          'retained': ('0.1.3-update.json', '0.1.3'), 'full': ('0.1.3.json', '0.1.3'),
@@ -127,6 +127,20 @@ def preserved_after_restore(owner, fixture, account):
     owner.login()
     require(owner.owner == account, 'Restore changed the original account identity.')
     previous.preserved(owner, fixture, owner.cookie, owner.csrf, account)
+
+
+def failure_locations(error):
+    """Public diagnostics identify assertions without response values or locals."""
+    allowed = {ROOT / 'tools' / name for name in ['application_update_test.py', 'integration.py']}
+    locations = []
+    trace = error.__traceback__
+    while trace is not None:
+        path = Path(trace.tb_frame.f_code.co_filename).resolve()
+        if path in allowed:
+            locations.append({'path': path.relative_to(ROOT).as_posix(), 'line': trace.tb_lineno,
+                              'function': trace.tb_frame.f_code.co_name})
+        trace = trace.tb_next
+    return locations
 
 
 def verify(args, evidence):
@@ -298,11 +312,11 @@ def main():
         evidence['conclusion'] = 'passed'; evidence.pop('activeCheck', None)
     except Exception as error:
         evidence['errorClass'] = type(error).__name__
-        trace = error.__traceback__
-        while trace is not None:
-            if Path(trace.tb_frame.f_code.co_filename).resolve() == ROOT / 'tools/application_update_test.py':
-                evidence['errorLocation'] = {'path': 'tools/application_update_test.py', 'line': trace.tb_lineno, 'function': trace.tb_frame.f_code.co_name}
-            trace = trace.tb_next
+        locations = failure_locations(error)
+        if locations:
+            evidence['errorLocations'] = locations
+            evidence['errorLocation'] = next((location for location in reversed(locations)
+                                              if location['function'] != 'require'), locations[-1])
         print('FAIL application update: ' + evidence.get('activeCheck', 'preflight') + ' (' + type(error).__name__ + '); private diagnostics remain on runner.', file=sys.stderr)
     finally: previous.write_json(output / 'verification.json', evidence)
     print('Published application update ' + args.base + ' linux/' + args.arch + ': ' + evidence['conclusion'])

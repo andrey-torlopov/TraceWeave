@@ -19,10 +19,10 @@ class ApplicationUpdateTests(unittest.TestCase):
         # Synthetic in-memory validation input, never written as a release or pulled.
         value = json.loads((ROOT / 'releases/0.1.4.json').read_text())
         for key in ['releaseId', 'frontendReleaseId', 'frontendVersion', 'backendVersion']:
-            value[key] = '0.1.5'
+            value[key] = '0.1.6'
         for key in ['backend', 'frontend', 'gateway', 'tools']:
             digest = hashlib.sha256(('synthetic application update unit fixture ' + key).encode()).hexdigest()
-            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.1.5@sha256:' + digest
+            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.1.6@sha256:' + digest
         contract = hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest()
         value['contractHash'] = value['backendContractHash'] = contract
         value['supportedClientContractHashes'] = [contract] + json.loads((ROOT / 'contracts/client-compatibility.json').read_text())
@@ -41,7 +41,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 selected = application_update_test.compatible(base, candidate)
                 control.validate_update(base, selected)
                 self.assertEqual((base, candidate), before)
-                self.assertEqual(selected['releaseId'], '0.1.5')
+                self.assertEqual(selected['releaseId'], '0.1.6')
                 self.assertEqual(set(control.changes(base, selected)), {'backend', 'frontend', 'tools'})
                 for key in ['postgres', 'gateway']:
                     self.assertEqual(selected['images'][key], base['images'][key])
@@ -64,7 +64,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 base = json.loads((ROOT / 'releases' / filename).read_text())
                 selected = application_update_test.compatible(base, candidate)
                 version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1)
-                expected = stable.parent / ('0.1.5-update-infra-' + version + '.json')
+                expected = stable.parent / ('0.1.6-update-infra-' + version + '.json')
                 fixtures = {stable: candidate, expected: selected}
                 with patch.object(control, 'manifest', side_effect=lambda path: copy.deepcopy(fixtures[path])), \
                         patch.object(Path, 'exists', lambda path: path in fixtures):
@@ -194,5 +194,21 @@ class ApplicationUpdateTests(unittest.TestCase):
             self.assertEqual(call.kwargs, {'raw': raw, 'headers': dict(headers)})
         client.commands.assert_called_once_with('/synthetic-investigation', [
             {'kind': 'node.update', 'nodeId': prepared.node_id, 'changes': {'title': 'Edited after update synthetic-edit'}}])
+
+    def test_nested_helper_failure_reports_locations_without_private_values(self):
+        owner = Mock()
+        owner.json.return_value = {'node': {'title': 'private changed title', 'bodyMarkdown': 'private body'}}
+        fixture = {'path': '/private-investigation', 'node': 'private-node',
+                   'title': 'private expected title', 'body': 'private body'}
+        try:
+            application_update_test.integration.verify_file_report_smoke(owner, fixture, restored=True)
+        except AssertionError as error:
+            locations = application_update_test.failure_locations(error)
+        else:
+            self.fail('Changed fixture content must fail the unchanged helper assertion.')
+        self.assertEqual([item['function'] for item in locations], ['verify_file_report_smoke', 'require'])
+        self.assertTrue(all(item['path'] == 'tools/integration.py' and isinstance(item['line'], int) for item in locations))
+        self.assertTrue(all(set(item) == {'path', 'line', 'function'} for item in locations))
+        self.assertNotIn('private', json.dumps(locations))
 
 if __name__ == '__main__': unittest.main()
