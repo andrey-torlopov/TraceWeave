@@ -5202,7 +5202,8 @@
                   "text",
                   "image",
                   "audio",
-                  "video"
+                  "video",
+                  "file"
                 ],
                 "pattern": "^[^\\u0000]*$"
               },
@@ -5593,7 +5594,9 @@
                     "audio/mp4",
                     "video/mp4",
                     "video/webm",
-                    "video/quicktime"
+                    "video/quicktime",
+                    "application/pdf",
+                    "application/octet-stream"
                   ],
                   "pattern": "^[^\\u0000]*$"
                 }
@@ -5902,7 +5905,9 @@
                     "audio/mp4",
                     "video/mp4",
                     "video/webm",
-                    "video/quicktime"
+                    "video/quicktime",
+                    "application/pdf",
+                    "application/octet-stream"
                   ],
                   "pattern": "^[^\\u0000]*$"
                 }
@@ -6084,7 +6089,9 @@
                     "audio/mp4",
                     "video/mp4",
                     "video/webm",
-                    "video/quicktime"
+                    "video/quicktime",
+                    "application/pdf",
+                    "application/octet-stream"
                   ],
                   "pattern": "^[^\\u0000]*$"
                 }
@@ -6385,7 +6392,9 @@
                     "audio/mp4",
                     "video/mp4",
                     "video/webm",
-                    "video/quicktime"
+                    "video/quicktime",
+                    "application/pdf",
+                    "application/octet-stream"
                   ],
                   "pattern": "^[^\\u0000]*$"
                 }
@@ -19380,7 +19389,9 @@
               "audio/mp4",
               "video/mp4",
               "video/webm",
-              "video/quicktime"
+              "video/quicktime",
+              "application/pdf",
+              "application/octet-stream"
             ],
             "pattern": "^[^\\u0000]*$"
           },
@@ -19390,7 +19401,8 @@
               "text",
               "image",
               "audio",
-              "video"
+              "video",
+              "file"
             ],
             "pattern": "^[^\\u0000]*$"
           },
@@ -27654,7 +27666,9 @@
               "audio/mp4",
               "video/mp4",
               "video/webm",
-              "video/quicktime"
+              "video/quicktime",
+              "application/pdf",
+              "application/octet-stream"
             ],
             "pattern": "^[^\\u0000]*$"
           },
@@ -27664,7 +27678,8 @@
               "text",
               "image",
               "audio",
-              "video"
+              "video",
+              "file"
             ],
             "pattern": "^[^\\u0000]*$"
           },
@@ -27918,7 +27933,9 @@
               "audio/mp4",
               "video/mp4",
               "video/webm",
-              "video/quicktime"
+              "video/quicktime",
+              "application/pdf",
+              "application/octet-stream"
             ],
             "pattern": "^[^\\u0000]*$"
           },
@@ -28012,7 +28029,9 @@
               "audio/mp4",
               "video/mp4",
               "video/webm",
-              "video/quicktime"
+              "video/quicktime",
+              "application/pdf",
+              "application/octet-stream"
             ],
             "pattern": "^[^\\u0000]*$"
           },
@@ -28043,7 +28062,9 @@
                   "audio/mp4",
                   "video/mp4",
                   "video/webm",
-                  "video/quicktime"
+                  "video/quicktime",
+                  "application/pdf",
+                  "application/octet-stream"
                 ],
                 "pattern": "^[^\\u0000]*$"
               },
@@ -28060,7 +28081,8 @@
                   "text",
                   "image",
                   "audio",
-                  "video"
+                  "video",
+                  "file"
                 ],
                 "pattern": "^[^\\u0000]*$"
               },

@@ -111,6 +111,16 @@ class DatabaseContractTests(unittest.TestCase):
     def test_duplicate_primary_attachment(self):
         self.execute("INSERT INTO node_attachments VALUES (%s,%s,%s,%s,'primary',NULL,0)",[uid(700),uid(10),uid(100),uid(301)])
         self.rejected("INSERT INTO node_attachments VALUES (%s,%s,%s,%s,'primary',NULL,1)",[uid(701),uid(10),uid(100),uid(302)])
+    def test_arbitrary_file_profile_and_independent_attachment_copies(self):
+        self.execute("UPDATE blobs SET verified_mime_type='application/octet-stream',media_kind='file' WHERE id=%s",[uid(300)])
+        for asset in (301,302):
+            self.execute("UPDATE assets SET mime_type='application/octet-stream',media_kind='file' WHERE id=%s",[uid(asset)])
+            self.execute("INSERT INTO node_attachments VALUES (%s,%s,%s,%s,'attachment',NULL,0)",[uid(asset+500),uid(10),uid(100),uid(asset)])
+        self.execute('SET CONSTRAINTS ALL IMMEDIATE')
+        self.assertEqual(self.execute('SELECT count(*) FROM node_attachments WHERE node_id=%s',[uid(100)]).fetchone()[0],2)
+        self.rejected("UPDATE assets SET mime_type='text/html' WHERE id=%s",[uid(301)])
+        self.rejected("UPDATE assets SET mime_type='image/png' WHERE id=%s",[uid(301)])
+        self.rejected("UPDATE blobs SET verified_mime_type='text/html' WHERE id=%s",[uid(300)])
     def test_blob_immutable(self):self.rejected('UPDATE blobs SET sha256=%s WHERE id=%s',['b'*64,uid(300)])
     def test_referenced_blob_cannot_delete(self):self.rejected('DELETE FROM blobs WHERE id=%s',[uid(300)])
     def test_asset_blob_hash_match(self):self.rejected('UPDATE assets SET sha256=%s WHERE id=%s',['b'*64,uid(301)])
