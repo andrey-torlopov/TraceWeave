@@ -195,6 +195,32 @@ class ControlTests(unittest.TestCase):
         dependencies["install"].assert_called_once_with(self.config, self.release, selected)
         dependencies["prompt"].assert_called_once()
 
+    def test_guided_bootstrap_selects_exact_retained_infrastructure_when_application_versions_match(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        self.release["images"]["tools"] = "docker.io/andreytorlopov/traceweave-tools:0.1.0@sha256:" + "3" * 64
+        selected["images"]["tools"] = self.release["images"]["tools"]
+        control.write_json(self.runtime / "release.json", self.release)
+        wrong = copy.deepcopy(selected)
+        wrong["images"]["gateway"] = "sha256:" + "7" * 64
+        control.write_json(compatible, wrong)
+        variant = path.parent / "0.1.1-update-infra-0.1.0.json"
+        control.write_json(variant, selected)
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap", "--release", str(path), "--yes"]))
+        self.assertEqual(control.current(), selected)
+        dependencies["install"].assert_called_once_with(self.config, self.release, selected)
+
+    def test_guided_bootstrap_infrastructure_selector_cannot_substitute_application_images(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        self.release["images"]["tools"] = "docker.io/andreytorlopov/traceweave-tools:0.1.0@sha256:" + "3" * 64
+        control.write_json(self.runtime / "release.json", self.release)
+        compatible.unlink()
+        selected["images"].update(tools=self.release["images"]["tools"], frontend="sha256:" + "7" * 64)
+        control.write_json(path.parent / "0.1.1-update-infra-0.1.0.json", selected)
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap", "--release", str(path), "--yes"]))
+        self.assert_guided_no_update(dependencies)
+
     def test_guided_bootstrap_external_full_manifest_can_use_exact_checked_in_compatible_release(self):
         path, compatible, target, selected = self.guided_fixture(full=True)
         external = self.runtime.parent / "external candidate/full.json"

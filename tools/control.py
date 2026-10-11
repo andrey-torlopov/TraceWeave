@@ -307,6 +307,11 @@ def bootstrap_update(old,path):
     try:validate_update(old,target)
     except Failure:
         names=[target['releaseId']+'-update.json',target['releaseId']+'-update-from-'+old['releaseId']+'.json']
+        # One application version can retain infrastructure from several releases.
+        # Add an exact local selector without relaxing any target/source validation.
+        tools_version=re.fullmatch(r'docker\.io/andreytorlopov/traceweave-tools:([0-9]+\.[0-9]+\.[0-9]+)@sha256:[a-f0-9]{64}',old['images']['tools'])
+        if tools_version and stable_version(tools_version[1]):
+            names.append(target['releaseId']+'-update-infra-'+tools_version[1]+'.json')
         for name in names:
             selected_path=path.parent/name
             if not selected_path.exists():selected_path=ROOT/'releases'/name
