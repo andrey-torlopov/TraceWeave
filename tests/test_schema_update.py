@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 class SchemaUpdateTests(unittest.TestCase):
     def candidate(self):
         value = json.loads((ROOT / "releases/0.1.1.json").read_text())
-        for key in ["releaseId", "frontendReleaseId", "frontendVersion", "backendVersion"]: value[key] = "0.1.2"
-        for key in ["backend", "frontend", "gateway", "tools"]: value["images"][key] = value["images"][key].replace(":0.1.1@", ":0.1.2@")
+        for key in ["releaseId", "frontendReleaseId", "frontendVersion", "backendVersion"]: value[key] = "0.1.3"
+        for key in ["backend", "frontend", "gateway", "tools"]: value["images"][key] = value["images"][key].replace(":0.1.1@", ":0.1.3@")
         value["backendContractHash"] = value["contractHash"] = "c" * 64
         value["supportedClientContractHashes"] = [value["contractHash"], json.loads((ROOT / "releases/0.1.1.json").read_text())["contractHash"]]
         value["migrations"].append({"version": 7, "sha256": "d" * 64})
@@ -32,6 +32,6 @@ class SchemaUpdateTests(unittest.TestCase):
             value = self.candidate()
             if kind == "history": value["migrations"][0]["sha256"] = "e" * 64
             elif kind == "client": value["supportedClientContractHashes"] = [value["contractHash"]]
-            else: value["backendVersion"] = "0.1.3"
+            else: value["backendVersion"] = "0.1.4"
             with self.subTest(kind=kind), self.assertRaises((AssertionError, control.Failure)):
                 schema_update_test.compatible(base, value)

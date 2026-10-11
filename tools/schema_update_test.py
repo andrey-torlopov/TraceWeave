@@ -25,7 +25,7 @@ CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
 
 
 def compatible(base, candidate):
-    previous.published_manifest(candidate, '0.1.2')
+    previous.published_manifest(candidate, '0.1.3')
     control.validate_manifest(base)
     require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1'], 'Expected previous application pair.')
     require(len(base['migrations']) == 6 and len(candidate['migrations']) == 7 and
@@ -35,7 +35,7 @@ def compatible(base, candidate):
         result['images'][key] = base['images'][key]
     for key in ['delivery', 'deliveryDiffHash']:
         result['source'][key] = base['source'][key]
-    result['validation'] = 'Published 0.1.2 applications with retained installation infrastructure; native schema-update acceptance required.'
+    result['validation'] = 'Published 0.1.3 applications with retained installation infrastructure; native schema-update acceptance required.'
     control.validate_update(base, result)
     return result
 
@@ -105,11 +105,11 @@ def relation_regression(owner):
 
 
 def verify(args, evidence):
-    candidate = previous.published_manifest(previous.strict(Path(args.candidate).read_bytes()), '0.1.2')
+    candidate = previous.published_manifest(previous.strict(Path(args.candidate).read_bytes()), '0.1.3')
     filename = {'original': '0.1.0.json', 'retained': '0.1.1-update.json', 'full': '0.1.1.json'}[args.base]
     base = previous.strict((ROOT / 'releases' / filename).read_bytes())
     selected = compatible(base, candidate)
-    expected_name = '0.1.2-update-from-0.1.1.json' if args.base == 'full' else '0.1.2-update.json'
+    expected_name = '0.1.3-update-from-0.1.1.json' if args.base == 'full' else '0.1.3-update.json'
     checked = selected
     require(hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest() == candidate['contractHash'], 'Harness contract differs.')
     git = str(Path(shutil.which('git')).resolve())
@@ -141,7 +141,7 @@ def verify(args, evidence):
         fixture = previous.seed(owner)
         cookie, csrf, account = owner.cookie, owner.csrf, owner.owner
         path = fixture[0]
-        prepared = prepare_batch(owner, path, 'schema 0.1.2')
+        prepared = prepare_batch(owner, path, 'schema 0.1.3')
         body = json.loads(prepared.raw)
         body['commands'].append({'kind': 'relation.create', 'relation': {'id': integration.uid(), 'sourceNodeId': fixture[1],
             'targetNodeId': prepared.node_id, 'relationType': 'related_to', 'directed': True, 'label': 'Legacy pending relation',
@@ -220,7 +220,7 @@ def main():
     output = Path(args.output)
     require(not output.exists() and not output.is_symlink(), 'Fresh public evidence directory required.')
     output.mkdir(mode=0o700, parents=True)
-    evidence = {'formatVersion': 1, 'baseRelease': '0.1.0' if args.base == 'original' else '0.1.1', 'baseInfrastructure': args.base, 'targetRelease': '0.1.2',
+    evidence = {'formatVersion': 1, 'baseRelease': '0.1.0' if args.base == 'original' else '0.1.1', 'baseInfrastructure': args.base, 'targetRelease': '0.1.3',
                 'nativePlatform': 'linux/' + args.arch, 'anonymousPull': True, 'checks': {}, 'conclusion': 'failed'}
     if os.environ.get('GITHUB_REPOSITORY') and os.environ.get('GITHUB_RUN_ID'):
         evidence['runURL'] = 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID']

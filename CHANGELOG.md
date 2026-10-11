@@ -1,9 +1,10 @@
 # Changelog
 
-## 0.1.2 — 2026-10-11
+## 0.1.3 — 2026-10-11
 
 - Allow parallel relations, including identical type/direction/label pairs, while preserving separate IDs and idempotent commands.
 - Show fixed endpoint titles with a live direction preview, place the relation label first and offer four directions.
+- Preserve the entire local direction choice and fixed endpoints when reviewing conflicting server edits.
 - Add two-way rendering and Obsidian export; reverse direction swaps the stored endpoints.
 - Apply append-only migration 7 through guided bootstrap after a verified offline backup; retain old pending-client compatibility.
 - Select reviewed update manifests for retained 0.1.0 infrastructure and fresh 0.1.1 installations.
