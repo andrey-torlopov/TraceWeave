@@ -1,0 +1,80 @@
+{
+  "formatVersion": 1,
+  "baseRelease": "0.1.1",
+  "baseInfrastructure": "previous",
+  "targetRelease": "0.1.7",
+  "nativePlatform": "linux/arm64",
+  "anonymousPull": true,
+  "checks": {
+    "anonymous_native_provenance": "passed",
+    "published_previous_bootstrap": "passed",
+    "guided_automatic_backup_migration": "passed",
+    "graph_settings_frontend_asset": "passed",
+    "old_pending_relation_exact_replay": "passed",
+    "parallel_four_directions_and_isolated_deletion": "passed",
+    "files_and_reports_after_update": "passed",
+    "evidence_type_existing_and_new": "passed",
+    "repeat_bootstrap": "passed",
+    "rollback_matches_migration_history": "passed",
+    "backup_restore_new_volumes": "passed",
+    "safety_backup_restores_new_schema": "passed",
+    "marked_cleanup_retains_volumes": "passed"
+  },
+  "conclusion": "passed",
+  "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38154648811",
+  "source": {
+    "base": {
+      "backend": "7805c3069fca58cbae8d1f9572894c0d906461ed",
+      "frontend": "d707a19f396ea634a5616a371bb7cfc357ee9cd1",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "f8dbed0c827a42cf0df221a35a397805e9dac313",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "target": {
+      "backend": "b1ff4c9b9f048f47aa55c86e50e06b2e51743be5",
+      "frontend": "9baf2748b355c92819df9da0e13965ce19f78e8a",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "f8dbed0c827a42cf0df221a35a397805e9dac313",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tools": "246590a9f7f52c85af81d93e36540a8409bb59cd",
+      "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "guidedOperatorRevision": "246590a9f7f52c85af81d93e36540a8409bb59cd",
+  "images": {
+    "docker.io/andreytorlopov/traceweave-backend:0.1.1@sha256:931b40f9d9678b6bc3024f62a67216a492e17787f4dfb4c280f6db45d30282c4": {
+      "imageId": "sha256:52344af6446081fef289ecf9335b7d50f71f3595715f78e7213e1b99a496378b",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.1.1@sha256:0f328b10b3d0e5282f2f8ed5c837cbd89f87740b541fc85ac8a5ac313e354065": {
+      "imageId": "sha256:1e8e55165588c126a6dd341c05293dcc4ded3138358c488db9fd6e5003e116d4",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-tools:0.1.1@sha256:f5b3be8e1fafb677af9394bbdb852ca55757e90767b3e59a1b434844dd38d18f": {
+      "imageId": "sha256:c2606f0b85abd40e014bbf98931137b07c4242826423d605f9cf4df41d58596a",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-gateway:0.1.1@sha256:4a1f0250651795d7f2d2e8fcb56446ea24bf23bbff54feb2278eff93a0c4e082": {
+      "imageId": "sha256:7a7f5da2d8686eb2aed0e96778c235ee58aab85736e52f80884d558b2d838600",
+      "platform": "linux/arm64"
+    },
+    "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c": {
+      "imageId": "sha256:1f1c66e06b20326e8605215d3033d79e67a1341a46138ab8439e08cb58c231bc",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-backend:0.1.7@sha256:24c02f6eb05a2356019815aa749ec8aa5869c8ad8f1737b3a7c0f265b42e11c3": {
+      "imageId": "sha256:f4772176f7b33df2f41c183f814439a21bb4386aa060916c01ef544b472e5c17",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.1.7@sha256:d35103e789391bddda0bbb7ae86db01956aba5254493e611c15bb604dbff828c": {
+      "imageId": "sha256:789c6f295675221306851e0042acf0fa53e6315f898270c330df13f7fa894db7",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-tools:0.1.7@sha256:a348a8bb1c47ae9842e66ae4632818618d9569b52bf5283373a8d9dcb76a7168": {
+      "imageId": "sha256:464b636097750254b1ba752c949be6851f1a2df97a0d5d5ccd5556febdc2f599",
+      "platform": "linux/arm64"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.7 — 2026-10-11 (publication candidate)
+## 0.1.7 — 2026-10-11
 
 - Deliver the «Улика» evidence type for new and existing investigations with additive migration 10.
 - Select exact update manifests when an older gateway is paired with newer backup tools.

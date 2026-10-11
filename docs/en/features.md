@@ -16,6 +16,8 @@ The gear button, “Graph settings”, beside the zoom controls sets how many ti
 
 Version 0.1.6 accepts files up to 512 MiB, subject to the installation limit. Selecting the same file again creates an independent attachment. PDFs download for viewing in another application. The export menu offers raw data or a ZIP with one `report.md` and its originals.
 
+Version 0.1.7 adds **Улика** (Evidence) with a magnifying-glass icon 🔍. Choose it in the document type selector. New and existing investigations receive the type; existing custom types with the same name or code remain unchanged. A type label does not change the user’s assessment.
+
 ---
 
 [Documentation](index.md) · [README](../../README.md)
