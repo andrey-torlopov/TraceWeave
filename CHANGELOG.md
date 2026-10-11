@@ -10,6 +10,10 @@
 - Select reviewed update manifests for retained 0.1.0 infrastructure and fresh 0.1.1 installations.
 - Refuse image rollback across the schema change; recover the verified pre-update backup into new volumes.
 
+## 0.1.2 — superseded before stable promotion
+
+- Preserve the published immutable tags and images; use 0.1.3 for corrected conflict review.
+
 ## 0.1.1 — 2026-10-10
 
 - Deliver node deletion with cascading incident relations through backend/frontend 0.1.1.

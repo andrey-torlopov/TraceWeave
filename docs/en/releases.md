@@ -36,10 +36,12 @@ Declining, end of input or non-interactive execution keeps the installed release
 
 ## Recovery After Migration
 
-Release 0.1.3 changes the database schema. Ordinary `./traceweave.sh rollback` refuses old images on the new schema. Use a compatible fixing release or [restore a verified backup](operations.md) into new volumes. Restore returns data to its backup snapshot, retains previous volumes and creates a safety backup of the current state.
+Release 0.1.3 changes the database schema. Ordinary `./traceweave.sh rollback` refuses old images on the new schema. Use a compatible fixing release or [restore a verified backup](operations.md) into new volumes. Restore returns data to its backup snapshot, retains previous volumes and creates a safety backup of the current state. It revokes existing sessions; sign in again after restoration.
 
 Release 0.1.3 allows parallel relations, four directions and fixed dialog endpoints. Deleting a node still removes all incoming/outgoing relations.
 
 ---
 
 [Documentation](index.md) · [README](../../README.md)
+
+Verification: [publication](../../releases/verification/0.1.3/publication.json), [clean-host amd64](../../releases/verification/0.1.3/registry-amd64.json), [clean-host arm64](../../releases/verification/0.1.3/registry-arm64.json). Six native [schema update cases](../../releases/verification/0.1.3/) cover 0.1.0 and both 0.1.1 infrastructure selections.
