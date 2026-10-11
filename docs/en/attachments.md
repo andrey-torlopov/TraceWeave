@@ -2,7 +2,9 @@
 
 *[Русский](../ru/attachments.md)*
 
-Available in [release 0.1.6](releases.md). Uploaded originals retain their bytes and names.
+Available in [release 0.1.8](releases.md). Uploaded originals retain their bytes and names.
+
+Release 0.1.8 shows all card attachments as buttons with their kind and filename. Select a button to preview one image, audio or video; other files download for local viewing. Switching stops the previous player. Add files together or consecutively. Detaching keeps the original and other attachments.
 
 In a card’s Materials section, select Add files. You can choose multiple files, including PDFs, documents, spreadsheets, archives and files without an extension. All files shows the full selection; image, audio and video filters help narrow it down.
 

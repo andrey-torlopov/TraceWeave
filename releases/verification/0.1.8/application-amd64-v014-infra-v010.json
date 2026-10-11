@@ -1,0 +1,80 @@
+{
+  "formatVersion": 1,
+  "baseRelease": "0.1.4",
+  "baseInfrastructure": "v014-infra-v010",
+  "targetRelease": "0.1.8",
+  "nativePlatform": "linux/amd64",
+  "anonymousPull": true,
+  "checks": {
+    "anonymous_native_provenance": "passed",
+    "published_previous_bootstrap": "passed",
+    "guided_automatic_backup_migration": "passed",
+    "graph_settings_frontend_asset": "passed",
+    "old_pending_relation_exact_replay": "passed",
+    "parallel_four_directions_and_isolated_deletion": "passed",
+    "files_and_reports_after_update": "passed",
+    "evidence_type_existing_and_new": "passed",
+    "repeat_bootstrap": "passed",
+    "rollback_matches_migration_history": "passed",
+    "backup_restore_new_volumes": "passed",
+    "safety_backup_restores_new_schema": "passed",
+    "marked_cleanup_retains_volumes": "passed"
+  },
+  "conclusion": "passed",
+  "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38161348663",
+  "source": {
+    "base": {
+      "backend": "67d9c5b4ab3650d9aa0aab0d52e503252fe4b545",
+      "frontend": "361a551f78464d2a2103a86bf35a97f58bc67d7b",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "aa8543b44afaeeebdeb2e7c665bc6a4c40228637",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "target": {
+      "backend": "bf61e984fb19ac94ad500221420828b5b2a9d20b",
+      "frontend": "06c3e56942546c2809db3dd91c06f2dbf961a314",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "aa8543b44afaeeebdeb2e7c665bc6a4c40228637",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tools": "e24f63ba26f4980526c769310bfd0534430e8d88",
+      "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "guidedOperatorRevision": "e24f63ba26f4980526c769310bfd0534430e8d88",
+  "images": {
+    "docker.io/andreytorlopov/traceweave-backend:0.1.4@sha256:3418347696da2a49413933aa9cfaa5f0fab55cde7c6f4053a64d6549784fc92a": {
+      "imageId": "sha256:971537cd80570cbbec60e95fb07f2b9b133e5135bc13571dca336e856cc88af6",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.1.4@sha256:a4829699f357fa301d5aa2e6073d0edbabd529c880f0fcea81a2e14c11e1462c": {
+      "imageId": "sha256:890dd3cf8c39b9808f05330e9c398a32dd5131daf00affc7fde2ecd69d44a412",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-tools:0.1.0@sha256:858fe7801dd63c3b4cdc7df840d70990093d5caa17a90d149ab8c173fb4573d4": {
+      "imageId": "sha256:f496a92a5e691d91feaf492036c2b01f65fb909c65880bdbe95243fec6d43baa",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-gateway:0.1.0@sha256:1447283c4c478b2d0140fade066d75b2a02b4b58c362e8353915e4f34f209dfd": {
+      "imageId": "sha256:f14ed703cc3f1a7d022877bf19211a1d5422b1a39950d3816542f0e461bd5c80",
+      "platform": "linux/amd64"
+    },
+    "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c": {
+      "imageId": "sha256:2e182ed2ff8f5d0835353864264437a26dffc542a9a6c677ec495aa54e491627",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-backend:0.1.8@sha256:49489b6c89804e4cde67b3e33524e9c10f2be74db8d957da8d8a42c190c9b4e1": {
+      "imageId": "sha256:bb3f8bbcd66b887074445595654209c7152a113282f8d8887d38dfb6d76597c9",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.1.8@sha256:7ab7b3ae2f6950822f7192f973e60f04ee0c3cf7b7e0e8b5d689c132eef69ced": {
+      "imageId": "sha256:24d785cc9c2a8ee3ea883089a86d7437ff08f89d67e97b21098d70bf204039fb",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-tools:0.1.8@sha256:ff96753f87e8df97b59544864b59c1c2f234be3ba65425a53053166580af469c": {
+      "imageId": "sha256:df304aeaf0c4cf2aa57d994bee166e75e61b9f0e5fd7ba752795bc1b08338a9d",
+      "platform": "linux/amd64"
+    }
+  }
+}

@@ -1,1 +1,1 @@
-docker.io/andreytorlopov/traceweave-tools:0.1.7@sha256:a348a8bb1c47ae9842e66ae4632818618d9569b52bf5283373a8d9dcb76a7168
+docker.io/andreytorlopov/traceweave-tools:0.1.8@sha256:ff96753f87e8df97b59544864b59c1c2f234be3ba65425a53053166580af469c

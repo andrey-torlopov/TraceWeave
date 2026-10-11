@@ -2,6 +2,8 @@
 
 *[Русский](../ru/features.md)*
 
+Release 0.1.8 shows all card attachments as buttons with their kind and filename. Select a button to preview one image, audio or video; other files download for local viewing. Switching stops the previous player. Add files together or consecutively. Detaching keeps the original and other attachments.
+
 - Graph investigations with documents, attributes, relations, search and editing.
 - [Arbitrary file attachments](attachments.md), including PDFs; supported image/audio/video preview and original downloads.
 - [Raw Markdown/attachment ZIP export for Obsidian or one readable report](exports.md).
