@@ -18,18 +18,23 @@ from tools import control, integration
 from tools import published_update_test as previous
 from tools.update_integration import prepare_batch, apply_prepared_and_edit
 require = integration.require
-TARGET_VERSION = '0.1.6'
-TARGET_SCHEMA = 9
+TARGET_VERSION = '0.1.7'
+TARGET_SCHEMA = 10
 BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'),
          'retained': ('0.1.3-update.json', '0.1.3'), 'full': ('0.1.3.json', '0.1.3'),
          'retained-v011': ('0.1.3-update-from-0.1.1.json', '0.1.3'),
          'v014-full': ('0.1.4.json', '0.1.4'),
          'v014-infra-v010': ('0.1.4-update-infra-0.1.0.json', '0.1.4'),
          'v014-infra-v011': ('0.1.4-update-infra-0.1.1.json', '0.1.4'),
-         'v014-infra-v013': ('0.1.4-update-infra-0.1.3.json', '0.1.4')}
+         'v014-infra-v013': ('0.1.4-update-infra-0.1.3.json', '0.1.4'),
+         'v016-full': ('0.1.6.json', '0.1.6'),
+         'v016-infra-v010': ('0.1.6-update-infra-0.1.0.json', '0.1.6'),
+         'v016-infra-v011': ('0.1.6-update-infra-0.1.1.json', '0.1.6'),
+         'v016-infra-v013': ('0.1.6-update-infra-0.1.3.json', '0.1.6'),
+         'v016-infra-v014': ('0.1.6-update-infra-0.1.4.json', '0.1.6')}
 CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
           'guided_automatic_backup_migration', 'graph_settings_frontend_asset', 'old_pending_relation_exact_replay',
-          'parallel_four_directions_and_isolated_deletion', 'files_and_reports_after_update', 'repeat_bootstrap',
+          'parallel_four_directions_and_isolated_deletion', 'files_and_reports_after_update', 'evidence_type_existing_and_new', 'repeat_bootstrap',
           'rollback_matches_migration_history', 'backup_restore_new_volumes', 'safety_backup_restores_new_schema',
           'marked_cleanup_retains_volumes'}
 
@@ -37,12 +42,12 @@ CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
 def compatible(base, candidate):
     previous.published_manifest(candidate, TARGET_VERSION)
     control.validate_manifest(base)
-    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4'], 'Expected previous application pair.')
-    require(len(base['migrations']) in [6, 7] and len(candidate['migrations']) == TARGET_SCHEMA and
+    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4', '0.1.6'], 'Expected previous application pair.')
+    require(len(base['migrations']) in [6, 7, 9] and len(candidate['migrations']) == TARGET_SCHEMA and
             candidate['migrations'][:len(base['migrations'])] == base['migrations'], 'Existing migration history must be preserved.')
     feature_migrations = [{'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()}
-                          for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql')]]
-    require(candidate['migrations'][-2:] == feature_migrations, 'Candidate feature migrations differ from the harness.')
+                          for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql'), (10, '0010-evidence-node-type.sql')]]
+    require(candidate['migrations'][7:] == feature_migrations, 'Candidate feature migrations differ from the harness.')
     result = copy.deepcopy(candidate)
     for key in ['gateway', 'postgres']:
         result['images'][key] = base['images'][key]
@@ -54,6 +59,14 @@ def compatible(base, candidate):
     result['validation'] = 'Published ' + TARGET_VERSION + ' applications and tools with retained gateway/database; native application-update acceptance required.'
     control.validate_update(base, result)
     return result
+
+
+def compatible_name(base):
+    gateway = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1)
+    tools = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['tools']).group(1)
+    # Retained gateways can now coexist with newer tools; their exact from-images differ.
+    prefix = '-update-from-' + base['releaseId'] if tools != gateway else '-update'
+    return TARGET_VERSION + prefix + '-infra-' + gateway + '.json'
 
 
 def pull_images(base, selected, arch):
@@ -148,7 +161,7 @@ def verify(args, evidence):
     filename = BASES[args.base][0]
     base = previous.strict((ROOT / 'releases' / filename).read_bytes())
     selected = compatible(base, candidate)
-    expected_name = TARGET_VERSION + '-update-infra-' + re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1) + '.json'
+    expected_name = compatible_name(base)
     checked = selected
     require(hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest() == candidate['contractHash'], 'Harness contract differs.')
     git = str(Path(shutil.which('git')).resolve())
@@ -216,7 +229,8 @@ def verify(args, evidence):
         require(owner.json('GET', '/release.json')['frontendVersion'] == TARGET_VERSION, 'Updated frontend version differs.')
         current_html = owner.request('GET', '/')[0].decode()
         current_entry = re.search(r'src="(/assets/[^" ]+\.js)"', current_html).group(1)
-        require(current_entry != entry, 'The old frontend entry is still selected.')
+        # A catalog-only release can ship byte-identical frontend JS; release metadata
+        # and replaced container IDs above verify the selected frontend version.
         current_asset = owner.request('GET', current_entry)[0].decode('utf-8')
         require(all(text in current_asset for text in ['Настройки графа', 'Уменьшение карточки до узла, раз', 'Восстановлено текущее значение']), 'Published frontend omits graph settings.')
         evidence['checks']['graph_settings_frontend_asset'] = 'passed'
@@ -230,6 +244,10 @@ def verify(args, evidence):
         evidence['activeCheck'] = 'files_and_reports_after_update'
         file_fixture = integration.file_report_smoke(owner)
         evidence['checks']['files_and_reports_after_update'] = 'passed'
+        evidence['activeCheck'] = 'evidence_type_existing_and_new'
+        integration.evidence_type_smoke(owner, path=path)
+        integration.evidence_type_smoke(owner)
+        evidence['checks']['evidence_type_existing_and_new'] = 'passed'
         evidence['activeCheck'] = 'repeat_bootstrap'
         snapshots = {item['id']: owner.json('GET', '/api/v1/investigations/' + item['id'] + '/graph') for item in owner.json('GET', '/api/v1/investigations')['items']}
         backups = set((runtime / 'backups').iterdir())

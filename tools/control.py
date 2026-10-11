@@ -318,6 +318,7 @@ def bootstrap_update(old,path):
         # Add an exact local selector without relaxing any target/source validation.
         gateway_version=re.fullmatch(r'docker\.io/andreytorlopov/traceweave-gateway:([0-9]+\.[0-9]+\.[0-9]+)@sha256:[a-f0-9]{64}',old['images']['gateway'])
         if gateway_version and stable_version(gateway_version[1]):
+            names.append(target['releaseId']+'-update-from-'+old['releaseId']+'-infra-'+gateway_version[1]+'.json')
             names.append(target['releaseId']+'-update-infra-'+gateway_version[1]+'.json')
         for name in names:
             selected_path=path.parent/name

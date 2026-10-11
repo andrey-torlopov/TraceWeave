@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7 — 2026-10-11 (publication candidate)
+
+- Deliver the «Улика» evidence type for new and existing investigations with additive migration 10.
+- Select exact update manifests when an older gateway is paired with newer backup tools.
+- Verify updates from fourteen published baselines on both native architectures, including all 0.1.6 infrastructure selections.
+
 ## 0.1.6 — 2026-10-11
 
 - Attach arbitrary files, including PDFs and empty files; repeated uploads create independent materials and attachments with unchanged original bytes.

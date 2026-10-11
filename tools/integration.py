@@ -366,6 +366,39 @@ def file_report_smoke(owner,*,path=None,node=None):
     print('PASS generic/PDF/empty files, independent repeated upload, native cookie-only GET/HEAD/Range and byte-exact raw/readable exports.',flush=True)
     return fixture
 
+
+def evidence_type_smoke(owner, *, path=None):
+    fresh = path is None
+    if fresh:
+        path = '/api/v1/investigations/' + owner.create('Evidence acceptance ' + uid())['id']
+    graph = owner.json('GET', path + '/graph')
+    types = [item for item in graph['nodeTypes'] if item['code'] == 'evidence']
+    require(len(types) == 1, 'Expected one evidence type in the investigation catalog.')
+    kind = types[0]
+    require(kind['name'] == 'Улика' and kind['iconKey'] == 'search' and not kind['isSystem']
+            and not kind['isHidden'] and kind['attributeTemplates'] == [], 'Evidence type metadata differs.')
+    node = uid(); title = 'Synthetic evidence'; body = 'Evidence survives persistence and export'
+    owner.commands(path, [{'kind': 'node.create', 'node': {'id': node, 'typeId': kind['id'], 'title': title,
+                    'bodyMarkdown': body}, 'position': {'x': 600, 'y': 300}}])
+    document = owner.json('GET', path + '/nodes/' + node)['node']
+    require(document['typeId'] == kind['id'] and document['bodyMarkdown'] == body, 'Evidence document did not persist.')
+    reloaded = owner.json('GET', path + '/graph')
+    require([item for item in reloaded['nodeTypes'] if item['code'] == 'evidence'] == types,
+            'Reload duplicated or changed the evidence type.')
+    if fresh:
+        fixture = dict(path=path, node=node, title=title, body=body, originals={})
+        captures = create_file_report_exports(owner, fixture)
+        for format, capture in captures.items():
+            with zipfile.ZipFile(io.BytesIO(capture['bytes'])) as zipped:
+                if format == 'readable_report':
+                    require('- Тип: Улика' in zipped.read('report.md').decode('utf-8'), 'Readable report lost the evidence type.')
+                else:
+                    snapshot = json.loads(zipped.read('metadata/snapshot.json'))
+                    require(any(item['id'] == kind['id'] and item['code'] == 'evidence' and item['iconKey'] == 'search'
+                                for item in snapshot['nodeTypes']), 'Raw export lost the evidence type/icon.')
+    print('PASS evidence catalog, ordinary document persistence and reload' + ('; both exports.' if fresh else ' after upgrade.'), flush=True)
+
+
 def smoke(runtime,origin):
     owner=Client(origin);session=owner.login();require(session['user']['email']==EMAIL,'Canonical email missing.')
     require(owner.json('GET','/api/v1/accounts/config')['registrationEnabled'] is False,'Local registration must be disabled.')
@@ -417,6 +450,7 @@ def smoke(runtime,origin):
     owner.request('POST',path+'/commands',batch,headers={'X-CSRF-Token':'invalid'},expected=403)
     owner.request('GET',path,headers={'Host':'untrusted.example.test'},expected=403)
     node_deletion_smoke(owner)
+    evidence_type_smoke(owner)
     print('PASS real email/session, command replay, all synthetic media, HEAD/Range, ZIP and two-account access boundaries.',flush=True)
     return owner,path,node,originals
 

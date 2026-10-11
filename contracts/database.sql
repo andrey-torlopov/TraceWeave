@@ -467,3 +467,12 @@ ALTER TABLE export_jobs DROP CONSTRAINT export_jobs_check;
 ALTER TABLE export_jobs ADD CONSTRAINT export_jobs_check
   CHECK((kind IN ('project_archive','obsidian_vault','readable_report') AND source_revision IS NOT NULL AND report_snapshot_id IS NULL)
      OR (kind IN ('report_markdown','report_bundle') AND source_revision IS NULL AND report_snapshot_id IS NOT NULL));
+
+-- TW-E2-004: add the ordinary evidence type without replacing user catalog entries.
+INSERT INTO node_types(id,investigation_id,code,name,icon_key,color,is_system,is_hidden,attribute_templates)
+SELECT gen_random_uuid(), i.id, 'evidence', 'Улика', 'search', '#EAB308', false, false, '[]'::jsonb
+FROM investigations i
+WHERE NOT EXISTS (
+  SELECT 1 FROM node_types t WHERE t.investigation_id=i.id
+    AND (t.code='evidence' OR translate(btrim(t.name),'УЛИКА','улика')='улика')
+);

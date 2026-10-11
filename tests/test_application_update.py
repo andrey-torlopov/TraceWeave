@@ -19,14 +19,14 @@ class ApplicationUpdateTests(unittest.TestCase):
         # Synthetic in-memory validation input, never written as a release or pulled.
         value = json.loads((ROOT / 'releases/0.1.4.json').read_text())
         for key in ['releaseId', 'frontendReleaseId', 'frontendVersion', 'backendVersion']:
-            value[key] = '0.1.6'
+            value[key] = '0.1.7'
         for key in ['backend', 'frontend', 'gateway', 'tools']:
             digest = hashlib.sha256(('synthetic application update unit fixture ' + key).encode()).hexdigest()
-            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.1.6@sha256:' + digest
+            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.1.7@sha256:' + digest
         contract = hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest()
         value['contractHash'] = value['backendContractHash'] = contract
         value['supportedClientContractHashes'] = [contract] + json.loads((ROOT / 'contracts/client-compatibility.json').read_text())
-        for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql')]:
+        for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql'), (10, '0010-evidence-node-type.sql')]:
             value['migrations'].append({'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()})
         value['source']['delivery'] = 'f' * 40
         return value
@@ -41,7 +41,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 selected = application_update_test.compatible(base, candidate)
                 control.validate_update(base, selected)
                 self.assertEqual((base, candidate), before)
-                self.assertEqual(selected['releaseId'], '0.1.6')
+                self.assertEqual(selected['releaseId'], '0.1.7')
                 self.assertEqual(set(control.changes(base, selected)), {'backend', 'frontend', 'tools'})
                 for key in ['postgres', 'gateway']:
                     self.assertEqual(selected['images'][key], base['images'][key])
@@ -50,7 +50,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 self.assertEqual(selected['source']['tools'], candidate['source']['delivery'])
                 self.assertEqual(selected['source']['toolsDiffHash'], candidate['source']['deliveryDiffHash'])
                 self.assertEqual(selected['migrations'][:len(base['migrations'])], base['migrations'])
-                self.assertEqual(len(selected['migrations']), 9)
+                self.assertEqual(len(selected['migrations']), 10)
                 self.assertNotEqual(selected['migrations'], base['migrations'])
                 for key in ['delivery', 'deliveryDiffHash']:
                     self.assertEqual(selected['source'][key], base['source'][key])
@@ -64,11 +64,30 @@ class ApplicationUpdateTests(unittest.TestCase):
                 base = json.loads((ROOT / 'releases' / filename).read_text())
                 selected = application_update_test.compatible(base, candidate)
                 version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1)
-                expected = stable.parent / ('0.1.6-update-infra-' + version + '.json')
+                expected = stable.parent / application_update_test.compatible_name(base)
                 fixtures = {stable: candidate, expected: selected}
                 with patch.object(control, 'manifest', side_effect=lambda path: copy.deepcopy(fixtures[path])), \
                         patch.object(Path, 'exists', lambda path: path in fixtures):
                     self.assertEqual(control.bootstrap_update(base, stable), (expected, selected))
+
+    def test_same_gateway_with_different_tools_selects_the_exact_from_version(self):
+        candidate = self.candidate()
+        bases = [json.loads((ROOT / 'releases' / name).read_text()) for name in
+                 ['0.1.4-update-infra-0.1.0.json', '0.1.6-update-infra-0.1.0.json']]
+        self.assertEqual(bases[0]['images']['gateway'], bases[1]['images']['gateway'])
+        self.assertNotEqual(bases[0]['images']['tools'], bases[1]['images']['tools'])
+        with tempfile.TemporaryDirectory() as directory:
+            stable = Path(directory) / 'stable.json'
+            control.write_json(stable, candidate)
+            variants = {}
+            for base in bases:
+                name = application_update_test.compatible_name(base)
+                variants[name] = application_update_test.compatible(base, candidate)
+                control.write_json(stable.parent / name, variants[name])
+            self.assertEqual(len(variants), 2)
+            for base in bases:
+                expected = stable.parent / application_update_test.compatible_name(base)
+                self.assertEqual(control.bootstrap_update(base, stable), (expected, variants[expected.name]))
 
     def test_published_older_tools_are_trusted_for_restore_by_local_release_catalog(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(control, 'RUNTIME', Path(directory)):
@@ -112,13 +131,14 @@ class ApplicationUpdateTests(unittest.TestCase):
     def test_acceptance_cannot_change_existing_history_or_strand_pending_clients(self):
         for filename, _ in application_update_test.BASES.values():
             base = json.loads((ROOT / 'releases' / filename).read_text())
-            for kind in ['history', 'client', 'version', 'short_schema', 'extra_schema', 'attachment_migration', 'report_migration']:
+            for kind in ['history', 'client', 'version', 'short_schema', 'extra_schema', 'attachment_migration', 'report_migration', 'evidence_migration']:
                 value = self.candidate()
                 if kind == 'history': value['migrations'][0]['sha256'] = 'e' * 64
                 elif kind == 'client': value['supportedClientContractHashes'] = [value['contractHash']]
                 elif kind == 'version': value['backendVersion'] = '0.1.4'
-                elif kind == 'extra_schema': value['migrations'].append({'version': 10, 'sha256': 'e' * 64})
+                elif kind == 'extra_schema': value['migrations'].append({'version': 11, 'sha256': 'e' * 64})
                 elif kind == 'attachment_migration': value['migrations'][7]['sha256'] = 'e' * 64
+                elif kind == 'evidence_migration': value['migrations'][9]['sha256'] = 'e' * 64
                 elif kind == 'report_migration': value['migrations'][8]['sha256'] = 'e' * 64
                 else: value['migrations'].pop()
                 with self.subTest(filename=filename, kind=kind), self.assertRaises((AssertionError, control.Failure)):
@@ -146,18 +166,18 @@ class ApplicationUpdateTests(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / '.github/workflows/application-update.yml').read_text())
         matrix = workflow['jobs']['published-update']['strategy']['matrix']['include']
         pairs = {(item['base'], item['arch']) for item in matrix}
-        self.assertEqual(len(application_update_test.BASES), 9)
-        self.assertEqual(len(matrix), 18)
+        self.assertEqual(len(application_update_test.BASES), 14)
+        self.assertEqual(len(matrix), 28)
         self.assertEqual(pairs, {(base, arch) for base in application_update_test.BASES for arch in ['amd64', 'arm64']})
         for item in matrix:
             base = json.loads((ROOT / 'releases' / application_update_test.BASES[item['base']][0]).read_text())
-            version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['tools']).group(1)
+            version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1)
             original = json.loads((ROOT / 'releases' / (version + '.json')).read_text())
             self.assertEqual(item['legacy_tag'], 'v' + version)
             self.assertEqual(base['source']['delivery'], original['source']['delivery'])
             self.assertEqual(item['runner'], {'amd64': 'ubuntu-24.04', 'arm64': 'ubuntu-24.04-arm'}[item['arch']])
 
-    def test_schema_nine_refuses_image_rollback_without_changing_any_installation_files(self):
+    def test_schema_ten_refuses_image_rollback_without_changing_any_installation_files(self):
         for filename, _ in application_update_test.BASES.values():
             base = json.loads((ROOT / 'releases' / filename).read_text())
             selected = application_update_test.compatible(base, self.candidate())
