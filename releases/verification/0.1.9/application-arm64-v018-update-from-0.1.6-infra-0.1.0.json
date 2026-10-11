@@ -1,0 +1,78 @@
+{
+  "formatVersion": 1,
+  "baseRelease": "0.1.8",
+  "baseInfrastructure": "v018-update-from-0.1.6-infra-0.1.0",
+  "targetRelease": "0.1.9",
+  "nativePlatform": "linux/arm64",
+  "anonymousPull": true,
+  "checks": {
+    "anonymous_native_provenance": "passed",
+    "published_previous_bootstrap": "passed",
+    "guided_automatic_backup_migration": "passed",
+    "graph_settings_frontend_asset": "passed",
+    "old_pending_relation_exact_replay": "passed",
+    "parallel_four_directions_and_isolated_deletion": "passed",
+    "files_and_reports_after_update": "passed",
+    "evidence_type_existing_and_new": "passed",
+    "repeat_bootstrap": "passed",
+    "rollback_matches_migration_history": "passed",
+    "backup_restore_new_volumes": "passed",
+    "safety_backup_restores_new_schema": "passed",
+    "marked_cleanup_retains_volumes": "passed"
+  },
+  "conclusion": "passed",
+  "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38166133230",
+  "source": {
+    "base": {
+      "backend": "bf61e984fb19ac94ad500221420828b5b2a9d20b",
+      "frontend": "06c3e56942546c2809db3dd91c06f2dbf961a314",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "aa8543b44afaeeebdeb2e7c665bc6a4c40228637",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tools": "e24f63ba26f4980526c769310bfd0534430e8d88",
+      "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "target": {
+      "backend": "edb5d4b8dab701f2aa1cde9ac3fc60af8dd2ecae",
+      "frontend": "abc72ebc1f4646d380d08826bf4444cf13a230f5",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "aa8543b44afaeeebdeb2e7c665bc6a4c40228637",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tools": "e24f63ba26f4980526c769310bfd0534430e8d88",
+      "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "guidedOperatorRevision": "ed881c2e8fd09cc5789fdebb7a32309d758a243e",
+  "images": {
+    "docker.io/andreytorlopov/traceweave-backend:0.1.8@sha256:49489b6c89804e4cde67b3e33524e9c10f2be74db8d957da8d8a42c190c9b4e1": {
+      "imageId": "sha256:2a79b56748cde2b51bccd3a6d3f98cae13c33e6f67c7113de47519813080a45d",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.1.8@sha256:7ab7b3ae2f6950822f7192f973e60f04ee0c3cf7b7e0e8b5d689c132eef69ced": {
+      "imageId": "sha256:de6eb6e835e4ab4e10f30db99d1ccaadbb3c711a8eb703ecd4c66c55b4672c17",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-tools:0.1.8@sha256:ff96753f87e8df97b59544864b59c1c2f234be3ba65425a53053166580af469c": {
+      "imageId": "sha256:8816bd256ad8c43d2cc48cbbd2104dbda986c59daf829743d3ec51b1d81c2969",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-gateway:0.1.0@sha256:1447283c4c478b2d0140fade066d75b2a02b4b58c362e8353915e4f34f209dfd": {
+      "imageId": "sha256:85569d8c0282e6aeafa60e5f75e447e1c8b7664301f5bfe27243decad520e497",
+      "platform": "linux/arm64"
+    },
+    "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c": {
+      "imageId": "sha256:1f1c66e06b20326e8605215d3033d79e67a1341a46138ab8439e08cb58c231bc",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-backend:0.1.9@sha256:a3b60fbdfa386163773d607d2ef73025dc634ac5e88e8873e67150922d14a91e": {
+      "imageId": "sha256:84c6d3761deabdc441e5891c55466d5a84ac138b9bc1273139c6fa3ca5bb549e",
+      "platform": "linux/arm64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.1.9@sha256:78604d77e318e57bac4b926c81add9cc5553f4d560fd1fb0a8dfa2aa26c06f46": {
+      "imageId": "sha256:87debb8f16a00e4c458a690b0719709b569faf3924bd0572c3de6ebfcaceb25d",
+      "platform": "linux/arm64"
+    }
+  }
+}

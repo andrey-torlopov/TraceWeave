@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.9 — 2026-10-11 (publication candidate)
+## 0.1.9 — 2026-10-11
 
 - Deliver configurable card-to-icon thresholds and icon diameter with centered graph geometry.
 - Select update manifests by exact installed tools/gateway versions, including same-application variants.
