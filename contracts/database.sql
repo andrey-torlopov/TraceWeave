@@ -458,3 +458,12 @@ ALTER TABLE assets DROP CONSTRAINT assets_media_kind_check;
 ALTER TABLE assets ADD CONSTRAINT assets_media_kind_check CHECK(media_kind IN ('text','image','audio','video','file'));
 ALTER TABLE assets ADD CONSTRAINT assets_file_format_check
  CHECK((media_kind='file') = (mime_type IN ('application/octet-stream','application/pdf')));
+
+-- CR-E7-002: readable reports share the immutable revision-based export capture.
+ALTER TABLE export_jobs DROP CONSTRAINT export_jobs_kind_check;
+ALTER TABLE export_jobs ADD CONSTRAINT export_jobs_kind_check
+  CHECK(kind IN ('project_archive','report_markdown','report_bundle','obsidian_vault','readable_report'));
+ALTER TABLE export_jobs DROP CONSTRAINT export_jobs_check;
+ALTER TABLE export_jobs ADD CONSTRAINT export_jobs_check
+  CHECK((kind IN ('project_archive','obsidian_vault','readable_report') AND source_revision IS NOT NULL AND report_snapshot_id IS NULL)
+     OR (kind IN ('report_markdown','report_bundle') AND source_revision IS NULL AND report_snapshot_id IS NOT NULL));

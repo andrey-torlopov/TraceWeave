@@ -14,6 +14,10 @@ Two documents can have multiple relations, including identical ones. Drawing a c
 
 The gear button, “Graph settings”, beside the zoom controls sets how many times a card must shrink before becoming a compact node. Use an integer from 2 to 10; the default is 3. With 5, cards remain visible above 20% zoom and become nodes at 20% or below. Invalid input restores the current value with an explanation. Apply saves the setting; Cancel leaves it unchanged. The setting belongs to this investigation in the current browser and does not change documents or relations.
 
+The sources prepared for the next version, 0.1.5, add [arbitrary files and attachments](attachments.md): documents, PDFs and other files up to 512 MiB.
+
+They also add an [export choice between raw data and a single readable report](exports.md).
+
 ---
 
 [Documentation](index.md) · [README](../../README.md)
