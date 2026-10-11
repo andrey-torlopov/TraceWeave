@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import contextlib
+import hashlib
 import importlib.util
 import io
 import ipaddress
@@ -80,6 +81,14 @@ class ControlTests(unittest.TestCase):
         if backend:
             value["images"]["backend"] = "sha256:" + "7" * 64
             value["backendVersion"] = "synthetic-2"
+        return value
+
+    def tools_candidate(self):
+        value = self.candidate(backend=True)
+        value['images']['tools'] = 'sha256:' + '8' * 64
+        value['migrations'].append({'version': 2, 'sha256': 'c' * 64})
+        value['toolsUpgrade'] = {'from': self.release['images']['tools'], 'to': value['images']['tools']}
+        value.setdefault('source', {}).update(tools='9' * 40, toolsDiffHash=hashlib.sha256(b'').hexdigest())
         return value
 
     def write_candidate(self, value):
@@ -199,6 +208,8 @@ class ControlTests(unittest.TestCase):
         path, compatible, target, selected = self.guided_fixture(full=True)
         self.release["images"]["tools"] = "docker.io/andreytorlopov/traceweave-tools:0.1.0@sha256:" + "3" * 64
         selected["images"]["tools"] = self.release["images"]["tools"]
+        self.release["images"]["gateway"] = "docker.io/andreytorlopov/traceweave-gateway:0.1.0@sha256:" + "4" * 64
+        selected["images"]["gateway"] = self.release["images"]["gateway"]
         control.write_json(self.runtime / "release.json", self.release)
         wrong = copy.deepcopy(selected)
         wrong["images"]["gateway"] = "sha256:" + "7" * 64
@@ -213,6 +224,8 @@ class ControlTests(unittest.TestCase):
     def test_guided_bootstrap_infrastructure_selector_cannot_substitute_application_images(self):
         path, compatible, target, selected = self.guided_fixture(full=True)
         self.release["images"]["tools"] = "docker.io/andreytorlopov/traceweave-tools:0.1.0@sha256:" + "3" * 64
+        self.release["images"]["gateway"] = "docker.io/andreytorlopov/traceweave-gateway:0.1.0@sha256:" + "4" * 64
+        selected["images"]["gateway"] = self.release["images"]["gateway"]
         control.write_json(self.runtime / "release.json", self.release)
         compatible.unlink()
         selected["images"].update(tools=self.release["images"]["tools"], frontend="sha256:" + "7" * 64)
@@ -220,6 +233,33 @@ class ControlTests(unittest.TestCase):
         with self.guided_dependencies() as dependencies:
             control.bootstrap(control.parser().parse_args(["bootstrap", "--release", str(path), "--yes"]))
         self.assert_guided_no_update(dependencies)
+
+    def test_guided_tools_upgrade_selects_gateway_variant_and_exact_candidate_tools_provenance(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        self.release['images']['gateway'] = 'docker.io/andreytorlopov/traceweave-gateway:0.1.0@sha256:' + '4' * 64
+        self.release['images']['tools'] = 'docker.io/andreytorlopov/traceweave-tools:0.1.4@sha256:' + '5' * 64
+        control.write_json(self.runtime / 'release.json', self.release)
+        target['migrations'].append({'version': 2, 'sha256': 'c' * 64})
+        target['source']['deliveryDiffHash'] = hashlib.sha256(b'').hexdigest()
+        selected['migrations'] = target['migrations']
+        selected['images'].update(gateway=self.release['images']['gateway'], tools=target['images']['tools'])
+        selected['source'].update(tools=target['source']['delivery'], toolsDiffHash=target['source']['deliveryDiffHash'])
+        selected['toolsUpgrade'] = {'from': self.release['images']['tools'], 'to': selected['images']['tools']}
+        control.write_json(path, target)
+        compatible.unlink()
+        variant = path.parent / '0.1.1-update-infra-0.1.0.json'
+        control.write_json(variant, selected)
+        self.assertEqual(control.bootstrap_update(self.release, path), (variant, selected))
+        for field in ['image', 'source']:
+            with self.subTest(field=field):
+                invalid = copy.deepcopy(selected)
+                if field == 'image':
+                    invalid['images']['tools'] = 'sha256:' + '7' * 64
+                    invalid['toolsUpgrade']['to'] = invalid['images']['tools']
+                else: invalid['source']['tools'] = '8' * 40
+                control.write_json(variant, invalid)
+                with self.assertRaisesRegex(control.Failure, 'tools image/source'):
+                    control.bootstrap_update(self.release, path)
 
     def test_guided_bootstrap_external_full_manifest_can_use_exact_checked_in_compatible_release(self):
         path, compatible, target, selected = self.guided_fixture(full=True)
@@ -599,6 +639,56 @@ class ControlTests(unittest.TestCase):
         with self.assertRaisesRegex(control.Failure, "new backend"):
             control.validate_update(self.release, candidate)
 
+    def test_tools_upgrade_requires_explicit_exact_transition_clean_source_and_schema_backend_change(self):
+        candidate = self.tools_candidate()
+        control.validate_manifest(candidate)
+        control.validate_update(self.release, candidate)
+        mutations = {
+            'missing marker': lambda value: value.pop('toolsUpgrade'),
+            'wrong old image': lambda value: value['toolsUpgrade'].update({'from': 'sha256:' + '9' * 64}),
+            'wrong new image': lambda value: value['toolsUpgrade'].update({'to': 'sha256:' + '9' * 64}),
+            'extra transition field': lambda value: value['toolsUpgrade'].update(unreviewed=True),
+            'missing source': lambda value: value.pop('source'),
+            'dirty source': lambda value: value['source'].update(toolsDiffHash='e' * 64),
+            'malformed source': lambda value: value['source'].update(tools='v0.1.5'),
+            'unchanged schema': lambda value: value.update(migrations=copy.deepcopy(self.release['migrations'])),
+            'unchanged backend': lambda value: value['images'].update(backend=self.release['images']['backend']),
+            'history rewrite': lambda value: value['migrations'][0].update(sha256='e' * 64),
+            'gateway change': lambda value: value['images'].update(gateway='sha256:' + 'e' * 64),
+            'postgres change': lambda value: value['images'].update(postgres='sha256:' + 'e' * 64),
+        }
+        for name, mutation in mutations.items():
+            with self.subTest(name=name):
+                invalid = copy.deepcopy(candidate); mutation(invalid)
+                with self.assertRaises(control.Failure): control.validate_update(self.release, invalid)
+
+    def test_resume_revalidates_tools_transition_before_maintenance_or_image_operations(self):
+        candidate = self.tools_candidate()
+        candidate['toolsUpgrade']['from'] = 'sha256:' + 'e' * 64
+        control.write_json(self.runtime / 'update-source.json', self.release)
+        control.write_json(self.runtime / 'pending-release.json', candidate)
+        control.phase('update-migrating', old=self.release['releaseId'], target=candidate['releaseId'])
+        with patch.object(control, 'compose') as compose, patch.object(control, 'caddy_config') as configure, \
+                patch.object(control, 'install_update') as install:
+            with self.assertRaisesRegex(control.Failure, 'matching toolsUpgrade'):
+                control.resume(SimpleNamespace(yes=True))
+        compose.assert_not_called(); configure.assert_not_called(); install.assert_not_called()
+
+    def test_coordinated_tools_update_backs_up_old_release_and_verifies_new_release_without_infrastructure_restart(self):
+        candidate = self.tools_candidate()
+        calls = []
+        with patch.object(control, 'compose', side_effect=lambda *args, **kwargs: calls.append((args, kwargs))) as compose, \
+                patch.object(control, 'reload_gateway'), patch.object(control, 'maintenance_check'), \
+                patch.object(control, 'preserve_assets'), patch.object(control, 'is_running', return_value=True), \
+                patch.object(control, 'stop_backend'), patch.object(control, 'do_backup', return_value='synthetic-pre-tools') as backup, \
+                patch.object(control, 'ready') as ready:
+            control.install_update(self.config, self.release, candidate)
+        backup.assert_called_once_with(self.config, self.release)
+        ready.assert_called_once_with(self.config, candidate)
+        self.assertEqual([args[-1] for args, _ in calls], ['migrate', 'backend', 'frontend'])
+        self.assertTrue(all(keywords['release'] == candidate for _, keywords in calls))
+        self.assertEqual(control.current(), candidate)
+
     def test_frontend_only_update_cannot_silently_change_backend_compatibility(self):
         candidate = self.candidate()
         candidate["supportedClientContractHashes"].append("c" * 64)
@@ -847,6 +937,90 @@ class ControlTests(unittest.TestCase):
         images.assert_not_called()
         gateway.assert_not_called()
         execute.assert_not_called()
+
+    def test_restore_verifies_safety_backup_with_target_tools_before_changing_current_state(self):
+        target = self.tools_candidate()
+        backup = self.runtime / 'backups' / 'synthetic-safety'
+        control.write_json(backup / 'manifest.json', {'release': target})
+        # The first restore recorded the formerly installed schema/tools release.
+        control.write_json(self.runtime / 'previous-release.json', target)
+        calls = []
+        def compose(*arguments, **keywords):
+            calls.append((arguments, keywords))
+            if arguments[-2:] == ('verify-backup', 'synthetic-safety'):
+                self.assertEqual(keywords['release']['images']['tools'], target['images']['tools'])
+                self.assertEqual(control.current(), self.release)
+                self.assertEqual(control.read_json(self.runtime / 'operation.json')['phase'], 'ready')
+        with patch.object(control, 'compose', side_effect=compose), patch.object(control, 'ensure_images') as images, \
+                patch.object(control, 'reload_gateway'), patch.object(control, 'maintenance_check'), \
+                patch.object(control, 'stop_backend'), patch.object(control, 'do_backup', return_value='synthetic-old-safety') as safety, \
+                patch.object(control, 'execute'), patch.object(control, 'initialize_volumes'), patch.object(control, 'ready'):
+            control.restore_command(SimpleNamespace(backup='synthetic-safety', yes=True))
+        images.assert_called_once_with(target)
+        self.assertEqual(calls[0][0][-3:], ('ops', 'verify-backup', 'synthetic-safety'))
+        safety.assert_called_once_with(self.config, self.release)
+        self.assertEqual(control.current(), target)
+        self.assertNotEqual(control.load_config()['volumes']['database'], self.config['volumes']['database'])
+
+    def test_restore_rejects_symlink_metadata_and_failed_or_changed_verification_before_mutation(self):
+        target = self.tools_candidate()
+        control.write_json(self.runtime / 'previous-release.json', target)
+        backup = self.runtime / 'backups' / 'synthetic-safety'
+        metadata = backup / 'manifest.json'
+        for mode in ['directory', 'symlink', 'failed', 'changed']:
+            with self.subTest(mode=mode):
+                if metadata.is_dir() and not metadata.is_symlink(): metadata.rmdir()
+                else: metadata.unlink(missing_ok=True)
+                control.write_json(metadata, {'release': target})
+                if mode == 'directory':
+                    metadata.unlink(); metadata.mkdir()
+                elif mode == 'symlink':
+                    metadata.rename(backup / 'outside.json')
+                    metadata.symlink_to(backup / 'outside.json')
+                def verify(*args, **kwargs):
+                    if mode == 'failed': raise control.Failure('backup checksum rejected')
+                    control.write_json(metadata, {'release': self.release})
+                before = {name: (self.runtime / name).read_bytes() for name in ['release.json', 'installation.json', 'operation.json']}
+                with patch.object(control, 'ensure_images') as images, patch.object(control, 'compose', side_effect=verify) as compose, \
+                        patch.object(control, 'reload_gateway') as gateway, patch.object(control, 'execute') as execute:
+                    with self.assertRaises(control.Failure): control.restore_command(SimpleNamespace(backup='synthetic-safety', yes=True))
+                gateway.assert_not_called(); execute.assert_not_called()
+                if mode in ['directory', 'symlink']: images.assert_not_called(); compose.assert_not_called()
+                self.assertEqual({name: (self.runtime / name).read_bytes() for name in before}, before)
+
+    def test_restore_cannot_execute_or_pull_tools_selected_only_by_an_untrusted_backup(self):
+        target = self.tools_candidate()
+        target['images']['tools'] = 'untrusted.invalid/backup-tools@sha256:' + 'f' * 64
+        target['toolsUpgrade']['to'] = target['images']['tools']
+        backup = self.runtime / 'backups' / 'synthetic-untrusted'
+        control.write_json(backup / 'manifest.json', {'release': target})
+        # Pending/uninstalled payloads do not grant trust either.
+        control.write_json(self.runtime / 'pending-release.json', target)
+        with patch.object(control, 'ensure_images') as images, patch.object(control, 'compose') as compose, \
+                patch.object(control, 'confirm', side_effect=control.Failure('declined')) as confirm, \
+                patch.object(control, 'reload_gateway') as gateway, patch.object(control, 'execute') as execute:
+            with self.assertRaisesRegex(control.Failure, 'reviewed release manifest'):
+                control.restore_command(SimpleNamespace(backup='synthetic-untrusted', yes=False))
+        images.assert_not_called(); compose.assert_not_called(); confirm.assert_not_called()
+        gateway.assert_not_called(); execute.assert_not_called()
+        self.assertEqual(control.current(), self.release)
+        self.assertEqual(control.read_json(self.runtime / 'operation.json')['phase'], 'ready')
+
+    def test_restore_trusts_valid_local_release_catalog_but_not_invalid_or_symlink_manifests(self):
+        target = self.tools_candidate()
+        directory = self.runtime.parent / 'trusted-delivery'
+        catalog = directory / 'releases'
+        control.write_json(catalog / 'source-lock.json', {'backend': 'a' * 40, 'frontend': 'b' * 40})
+        control.write_json(catalog / 'invalid.json', {'formatVersion': 1, 'images': {'tools': target['images']['tools']}})
+        control.write_json(catalog / 'malformed.json', {'formatVersion': 1, 'releaseId': []})
+        outside = self.runtime / 'untrusted-manifest.json'
+        control.write_json(outside, target)
+        (catalog / 'symlink.json').symlink_to(outside)
+        with patch.object(control, 'ROOT', directory):
+            with self.assertRaisesRegex(control.Failure, 'not trusted'):
+                control.require_trusted_restore_tools(target, self.release)
+            control.write_json(catalog / 'reviewed.local.json', target)
+            control.require_trusted_restore_tools(target, self.release)
 
     def test_failed_restore_readiness_keeps_old_release_and_preserved_volumes(self):
         target = self.candidate(backend=True)

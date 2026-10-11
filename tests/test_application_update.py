@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import tempfile
@@ -27,6 +28,7 @@ class ApplicationUpdateTests(unittest.TestCase):
         value['supportedClientContractHashes'] = [contract] + json.loads((ROOT / 'contracts/client-compatibility.json').read_text())
         for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql')]:
             value['migrations'].append({'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()})
+        value['source']['delivery'] = 'f' * 40
         return value
 
     def test_all_published_baselines_retain_their_exact_infrastructure_and_history(self):
@@ -40,15 +42,72 @@ class ApplicationUpdateTests(unittest.TestCase):
                 control.validate_update(base, selected)
                 self.assertEqual((base, candidate), before)
                 self.assertEqual(selected['releaseId'], '0.1.5')
-                self.assertEqual(set(control.changes(base, selected)), {'backend', 'frontend'})
-                for key in ['postgres', 'tools', 'gateway']:
+                self.assertEqual(set(control.changes(base, selected)), {'backend', 'frontend', 'tools'})
+                for key in ['postgres', 'gateway']:
                     self.assertEqual(selected['images'][key], base['images'][key])
+                self.assertEqual(selected['images']['tools'], candidate['images']['tools'])
+                self.assertEqual(selected['toolsUpgrade'], {'from': base['images']['tools'], 'to': candidate['images']['tools']})
+                self.assertEqual(selected['source']['tools'], candidate['source']['delivery'])
+                self.assertEqual(selected['source']['toolsDiffHash'], candidate['source']['deliveryDiffHash'])
                 self.assertEqual(selected['migrations'][:len(base['migrations'])], base['migrations'])
                 self.assertEqual(len(selected['migrations']), 9)
                 self.assertNotEqual(selected['migrations'], base['migrations'])
                 for key in ['delivery', 'deliveryDiffHash']:
                     self.assertEqual(selected['source'][key], base['source'][key])
                 self.assertTrue(set(base['supportedClientContractHashes']) <= set(selected['supportedClientContractHashes']))
+
+    def test_every_published_baseline_selects_its_gateway_variant_from_full_candidate(self):
+        candidate = self.candidate()
+        stable = control.ROOT / 'releases/stable.json'
+        for filename, _ in application_update_test.BASES.values():
+            with self.subTest(filename=filename):
+                base = json.loads((ROOT / 'releases' / filename).read_text())
+                selected = application_update_test.compatible(base, candidate)
+                version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1)
+                expected = stable.parent / ('0.1.5-update-infra-' + version + '.json')
+                fixtures = {stable: candidate, expected: selected}
+                with patch.object(control, 'manifest', side_effect=lambda path: copy.deepcopy(fixtures[path])), \
+                        patch.object(Path, 'exists', lambda path: path in fixtures):
+                    self.assertEqual(control.bootstrap_update(base, stable), (expected, selected))
+
+    def test_published_older_tools_are_trusted_for_restore_by_local_release_catalog(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(control, 'RUNTIME', Path(directory)):
+            for filename, _ in application_update_test.BASES.values():
+                with self.subTest(filename=filename):
+                    base = json.loads((ROOT / 'releases' / filename).read_text())
+                    installed = application_update_test.compatible(base, self.candidate())
+                    self.assertNotEqual(base['images']['tools'], installed['images']['tools'])
+                    control.require_trusted_restore_tools(base, installed)
+
+    def test_pulled_tools_use_new_provenance_while_gateway_retains_the_original_delivery(self):
+        base = json.loads((ROOT / 'releases/0.1.0.json').read_text())
+        candidate = self.candidate()
+        selected = application_update_test.compatible(base, candidate)
+        images = {}
+        for release in [base, selected]:
+            for key, reference in release['images'].items():
+                if reference in images: continue
+                labels = {}
+                if key != 'postgres':
+                    source = release['source'][key] if key in ['backend', 'frontend'] else (
+                        candidate['source']['delivery'] if key == 'tools' and release is selected else base['source']['delivery'])
+                    version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', reference).group(1)
+                    labels = {'org.opencontainers.image.version': version, 'org.opencontainers.image.ref.name': 'v' + version,
+                              'org.opencontainers.image.revision': source, 'org.opencontainers.image.source':
+                              'https://github.com/andrey-torlopov/TraceWeave' + {'backend': 'Backend', 'frontend': 'Frontend'}.get(key, '')}
+                images[reference] = {'Id': 'sha256:' + hashlib.sha256(reference.encode()).hexdigest(), 'Os': 'linux',
+                                     'Architecture': 'amd64', 'Config': {'Labels': labels}}
+        def command(*args):
+            if args == ('docker', 'info', '--format', '{{.Architecture}}'): return 'amd64'
+            self.assertEqual(args[:3], ('docker', 'image', 'inspect'))
+            return json.dumps([images[args[3]]])
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'DOCKER_CONFIG': directory}), \
+                patch.object(application_update_test.previous, 'command', side_effect=command), patch('subprocess.run'):
+            observed = application_update_test.pull_images(base, selected, 'amd64')
+            self.assertEqual(set(observed), set(images))
+            images[selected['images']['tools']]['Config']['Labels']['org.opencontainers.image.revision'] = base['source']['delivery']
+            with self.assertRaisesRegex(AssertionError, 'OCI provenance'):
+                application_update_test.pull_images(base, selected, 'amd64')
 
     def test_acceptance_cannot_change_existing_history_or_strand_pending_clients(self):
         for filename, _ in application_update_test.BASES.values():

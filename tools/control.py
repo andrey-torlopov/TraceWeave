@@ -84,6 +84,7 @@ def manifest(path):
     return validate_manifest(read_json(path))
 
 def validate_manifest(m):
+    if not isinstance(m,dict):raise Failure('Invalid release manifest.')
     if m.get('formatVersion')!=1 or not re.fullmatch(r'[a-zA-Z0-9._-]{1,80}',m.get('releaseId','')):raise Failure('Invalid release manifest.')
     for key in ['backend','frontend','postgres','gateway','tools']:
         image=m.get('images',{}).get(key,'')
@@ -99,6 +100,12 @@ def validate_manifest(m):
     if [v.get('version') for v in m['migrations']]!=expected_versions or any(not re.fullmatch('[a-f0-9]{64}',v.get('sha256','')) for v in m['migrations']):raise Failure('Invalid migration history.')
     for value in m['supportedClientContractHashes']:
         if not re.fullmatch('[a-f0-9]{64}',value):raise Failure('Invalid supported contract hash.')
+    if 'toolsUpgrade' in m:
+        upgrade=m['toolsUpgrade'];source=m.get('source',{})
+        if not isinstance(upgrade,dict) or set(upgrade)!= {'from','to'} or upgrade.get('to')!=m['images']['tools'] or upgrade.get('from')==upgrade.get('to') or not isinstance(upgrade.get('from'),str) or not re.fullmatch(r'(?:[a-zA-Z0-9._/:+-]+@)?sha256:[a-f0-9]{64}',upgrade['from']):
+            raise Failure('Invalid explicit tools upgrade.')
+        if not isinstance(source,dict) or not isinstance(source.get('tools'),str) or not re.fullmatch('[a-f0-9]{40}',source['tools']) or source.get('toolsDiffHash')!=hashlib.sha256(b'').hexdigest():
+            raise Failure('Tools upgrade requires exact clean source provenance.')
     return m
 
 def current():return manifest(RUNTIME/'release.json')
@@ -309,9 +316,9 @@ def bootstrap_update(old,path):
         names=[target['releaseId']+'-update.json',target['releaseId']+'-update-from-'+old['releaseId']+'.json']
         # One application version can retain infrastructure from several releases.
         # Add an exact local selector without relaxing any target/source validation.
-        tools_version=re.fullmatch(r'docker\.io/andreytorlopov/traceweave-tools:([0-9]+\.[0-9]+\.[0-9]+)@sha256:[a-f0-9]{64}',old['images']['tools'])
-        if tools_version and stable_version(tools_version[1]):
-            names.append(target['releaseId']+'-update-infra-'+tools_version[1]+'.json')
+        gateway_version=re.fullmatch(r'docker\.io/andreytorlopov/traceweave-gateway:([0-9]+\.[0-9]+\.[0-9]+)@sha256:[a-f0-9]{64}',old['images']['gateway'])
+        if gateway_version and stable_version(gateway_version[1]):
+            names.append(target['releaseId']+'-update-infra-'+gateway_version[1]+'.json')
         for name in names:
             selected_path=path.parent/name
             if not selected_path.exists():selected_path=ROOT/'releases'/name
@@ -325,6 +332,11 @@ def bootstrap_update(old,path):
             for key in ['backend','frontend','backendDiffHash','frontendDiffHash']:
                 if selected.get('source',{}).get(key)!=target.get('source',{}).get(key):
                     raise Failure('Compatible manifest does not match the selected application source.')
+            if selected['images']['tools']!=old['images']['tools']:
+                if selected['images']['tools']!=target['images']['tools'] or any(
+                        selected.get('source',{}).get(key)!=target.get('source',{}).get(origin)
+                        for key,origin in [('tools','delivery'),('toolsDiffHash','deliveryDiffHash')]):
+                    raise Failure('Compatible manifest does not match the selected tools image/source.')
             try:validate_update(old,selected)
             except Failure:continue
             return selected_path,selected
@@ -448,11 +460,17 @@ def backup_command():
 
 def changes(old,new):return [key for key in old['images'] if old['images'][key]!=new['images'][key]]
 def validate_update(old,new):
-    if new['images']['postgres']!=old['images']['postgres'] or new['images']['gateway']!=old['images']['gateway'] or new['images']['tools']!=old['images']['tools']:raise Failure('Database/gateway/tools image updates require a separate maintenance procedure.')
+    if new['images']['postgres']!=old['images']['postgres'] or new['images']['gateway']!=old['images']['gateway']:raise Failure('Database/gateway image updates require a separate maintenance procedure.')
     if not all(v in new['supportedClientContractHashes'] for v in old['supportedClientContractHashes']):raise Failure('Release would strand a supported old client/pending command; incompatible update refused.')
     old_m=old['migrations'];new_m=new['migrations']
     if new_m[:len(old_m)]!=old_m:raise Failure('Migration history is not append-only.')
     if new_m!=old_m and new['images']['backend']==old['images']['backend']:raise Failure('Schema changes require a new backend image.')
+    if new['images']['tools']!=old['images']['tools']:
+        validate_manifest(new)
+        if new.get('toolsUpgrade')!={'from':old['images']['tools'],'to':new['images']['tools']}:
+            raise Failure('Tools image updates require an explicit matching toolsUpgrade.')
+        if new['images']['backend']==old['images']['backend'] or len(new_m)<=len(old_m):
+            raise Failure('Tools upgrade requires a coordinated backend and append-only schema update.')
     if new['images']['backend']==old['images']['backend'] and new['supportedClientContractHashes']!=old['supportedClientContractHashes']:
         raise Failure('New client compatibility metadata requires a coordinated backend release.')
 
@@ -513,10 +531,36 @@ def rollback(a):
     phase('rollback-entering',target=target['releaseId'])
     reload_gateway(config,target,True);maintenance_check(config);stop_backend(config,old);compose('up','-d','--no-deps','--wait','--wait-timeout','240','backend','frontend',config=config,release=target);ready(config,target);write_json(RUNTIME/'release.json',target);reload_gateway(config,target,False);phase('ready',releaseId=target['releaseId']);print('Rollback completed.')
 
+def require_trusted_restore_tools(target,installed):
+    reference=target['images']['tools']
+    if reference==installed['images']['tools']:return
+    # Backup metadata is input, not authorization to execute an image with data
+    # and database credentials. Trust only installed history or local releases.
+    paths=[RUNTIME/'previous-release.json',*sorted((ROOT/'releases').glob('*.json'))]
+    for path in paths:
+        if path.is_symlink() or not path.is_file():continue
+        try:
+            release=read_json(path)
+            if not isinstance(release,dict) or release.get('formatVersion')!=1:continue
+            validate_manifest(release)
+        except (Failure,ValueError,TypeError,KeyError,AttributeError):continue
+        if release['images']['tools']==reference:return
+    raise Failure('Backup tools image is not trusted by installed history or local releases. Update the delivery checkout or add the reviewed release manifest to releases/ before restoring.')
+
 def restore_command(a):
     config=load_config();old=current();name=Path(a.backup).name
-    compose('run','--rm','-T','--no-deps','ops','verify-backup',name,config=config,release=old)
-    source=read_json(RUNTIME/'backups'/name/'manifest.json');target=validate_manifest(source['release']);ensure_images(target)
+    root=RUNTIME/'backups'/name;metadata=root/'manifest.json'
+    if not re.fullmatch(r'[a-zA-Z0-9_-]{1,120}',name) or (RUNTIME/'backups').is_symlink() or root.is_symlink() or not root.is_dir() or metadata.is_symlink() or not metadata.is_file():
+        raise Failure('Backup must be a named real directory with a regular manifest.')
+    source=read_json(metadata)
+    if not isinstance(source,dict):raise Failure('Invalid backup manifest.')
+    target=validate_manifest(source.get('release'))
+    require_trusted_restore_tools(target,old)
+    ensure_images(target)
+    # A restored old release may use tools that cannot read a newer safety backup.
+    # Validate that backup with its declared immutable tools before touching state.
+    compose('run','--rm','-T','--no-deps','ops','verify-backup',name,config=config,release=target)
+    if read_json(metadata)!=source:raise Failure('Backup manifest changed during verification.')
     confirm('Восстановить выбранную копию в НОВЫЕ volumes и переключить установку? Прежние volumes будут сохранены.',a.yes)
     write_json(RUNTIME/'restore-old-installation.json',config);write_json(RUNTIME/'restore-old-release.json',old)
     phase('restore-entering',backup=name)
@@ -542,6 +586,7 @@ def resume(a):
     if name.startswith('update-'):
         confirm('Продолжить прерванное обновление под заглушкой?',a.yes)
         config=load_config();old=manifest(RUNTIME/'update-source.json');target=manifest(RUNTIME/'pending-release.json')
+        validate_update(old,target)
         caddy_config(config,old,True);wait_services(['db','gateway'],config,old);reload_gateway(config,old,True);maintenance_check(config)
         history=json.loads(compose('run','--rm','-T','--no-deps','ops','history',config=config,release=target,capture=True))
         if history not in [old['migrations'],target['migrations']]:raise Failure('Unexpected schema state; leave maintenance enabled and inspect migrations.')

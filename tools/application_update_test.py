@@ -29,8 +29,9 @@ BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'
          'v014-infra-v013': ('0.1.4-update-infra-0.1.3.json', '0.1.4')}
 CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
           'guided_automatic_backup_migration', 'graph_settings_frontend_asset', 'old_pending_relation_exact_replay',
-          'parallel_four_directions_and_isolated_deletion', 'repeat_bootstrap',
-          'rollback_matches_migration_history', 'backup_restore_new_volumes', 'marked_cleanup_retains_volumes'}
+          'parallel_four_directions_and_isolated_deletion', 'files_and_reports_after_update', 'repeat_bootstrap',
+          'rollback_matches_migration_history', 'backup_restore_new_volumes', 'safety_backup_restores_new_schema',
+          'marked_cleanup_retains_volumes'}
 
 
 def compatible(base, candidate):
@@ -43,11 +44,14 @@ def compatible(base, candidate):
                           for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql')]]
     require(candidate['migrations'][-2:] == feature_migrations, 'Candidate feature migrations differ from the harness.')
     result = copy.deepcopy(candidate)
-    for key in ['gateway', 'tools', 'postgres']:
+    for key in ['gateway', 'postgres']:
         result['images'][key] = base['images'][key]
     for key in ['delivery', 'deliveryDiffHash']:
         result['source'][key] = base['source'][key]
-    result['validation'] = 'Published ' + TARGET_VERSION + ' applications with retained installation infrastructure; native application-update acceptance required.'
+    result['source']['tools'] = candidate['source']['delivery']
+    result['source']['toolsDiffHash'] = candidate['source']['deliveryDiffHash']
+    result['toolsUpgrade'] = {'from': base['images']['tools'], 'to': candidate['images']['tools']}
+    result['validation'] = 'Published ' + TARGET_VERSION + ' applications and tools with retained gateway/database; native application-update acceptance required.'
     control.validate_update(base, result)
     return result
 
@@ -67,7 +71,7 @@ def pull_images(base, selected, arch):
             require(image['Os'] == 'linux' and image['Architecture'] == arch, 'Pulled image architecture differs.')
             if key != 'postgres':
                 version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', reference).group(1)
-                origin = key if key in ['backend', 'frontend'] else 'delivery'
+                origin = key if key in ['backend', 'frontend'] or (key == 'tools' and 'tools' in release['source']) else 'delivery'
                 repository = 'TraceWeave' + {'backend': 'Backend', 'frontend': 'Frontend'}.get(key, '')
                 expected = {'org.opencontainers.image.version': version, 'org.opencontainers.image.ref.name': 'v' + version,
                             'org.opencontainers.image.revision': release['source'][origin],
@@ -130,7 +134,7 @@ def verify(args, evidence):
     filename = BASES[args.base][0]
     base = previous.strict((ROOT / 'releases' / filename).read_bytes())
     selected = compatible(base, candidate)
-    expected_name = TARGET_VERSION + '-update-infra-' + re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['tools']).group(1) + '.json'
+    expected_name = TARGET_VERSION + '-update-infra-' + re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1) + '.json'
     checked = selected
     require(hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest() == candidate['contractHash'], 'Harness contract differs.')
     git = str(Path(shutil.which('git')).resolve())
@@ -148,7 +152,9 @@ def verify(args, evidence):
     operator = None
     before_config = None
     try:
-        operator = previous.legacy_operator(legacy, runtime, base, selected)
+        # The old controller only bootstraps its own release. The current checked
+        # controller below owns the explicit schema/tools transition.
+        operator = previous.legacy_operator(legacy, runtime, base, base)
         base_path = runtime / 'previous.json'
         candidate_path = runtime / 'candidate.json'
         previous.write_json(candidate_path, candidate)
@@ -207,6 +213,9 @@ def verify(args, evidence):
         evidence['activeCheck'] = 'parallel_four_directions_and_isolated_deletion'
         relation_regression(owner)
         evidence['checks']['parallel_four_directions_and_isolated_deletion'] = 'passed'
+        evidence['activeCheck'] = 'files_and_reports_after_update'
+        file_fixture = integration.file_report_smoke(owner)
+        evidence['checks']['files_and_reports_after_update'] = 'passed'
         evidence['activeCheck'] = 'repeat_bootstrap'
         snapshots = {item['id']: owner.json('GET', '/api/v1/investigations/' + item['id'] + '/graph') for item in owner.json('GET', '/api/v1/investigations')['items']}
         backups = set((runtime / 'backups').iterdir())
@@ -238,6 +247,26 @@ def verify(args, evidence):
         require(state['phase'] == 'ready' and state.get('safetyBackup'), 'Restore omitted post-upgrade safety backup.')
         for volume in before_config['volumes'].values(): previous.command('docker', 'volume', 'inspect', volume)
         evidence['checks']['backup_restore_new_volumes'] = 'passed'
+        evidence['activeCheck'] = 'safety_backup_restores_new_schema'
+        safety_name = state['safetyBackup']
+        safety = operator.read_json(runtime / 'backups' / safety_name / 'manifest.json')
+        require(safety['release'] == selected and safety['migrations'] == selected['migrations'], 'Safety backup lost the new schema/tools selection.')
+        for data in file_fixture['originals'].values():
+            require(any(item['path'].startswith('files/') and item['bytes'] == len(data) and
+                        item['sha256'] == hashlib.sha256(data).hexdigest() for item in safety['databaseOriginals']),
+                    'Safety backup omitted a new file original.')
+        integration.cli(runtime, 'restore', '--backup', safety_name, '--yes')
+        recovered = operator.load_config()
+        require(operator.current() == selected and all(recovered['volumes'][key] != restored['volumes'][key] for key in ['database', 'files']),
+                'Safety restore did not recover the new release into new volumes.')
+        preserved_after_restore(owner, fixture, account)
+        integration.verify_file_report_smoke(owner, file_fixture, restored=True)
+        for identifier, graph in snapshots.items():
+            require(owner.json('GET', '/api/v1/investigations/' + identifier + '/graph') == graph, 'Safety restore changed post-update data.')
+        require(owner.json('GET', '/release.json')['releaseId'] == TARGET_VERSION, 'Safety restore selected the wrong frontend.')
+        for config in [before_config, restored]:
+            for volume in config['volumes'].values(): previous.command('docker', 'volume', 'inspect', volume)
+        evidence['checks']['safety_backup_restores_new_schema'] = 'passed'
     finally:
         if operator is not None and (runtime / 'installation.json').is_file():
             require(previous.strict((runtime / 'synthetic-installation.json').read_bytes()) == {'synthetic': True, 'email': integration.EMAIL}, 'Unmarked cleanup refused.')

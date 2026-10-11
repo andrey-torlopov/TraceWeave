@@ -1,11 +1,13 @@
 # Changelog
 
-## 0.1.5 — prepared locally, unpublished — 2026-10-11
+## 0.1.5 — publication candidate — 2026-10-11
 
-- Prepare backend/frontend/delivery 0.1.5 sources locally; no images, release manifests or stable promotion are published.
+- Prepare backend/frontend/delivery 0.1.5 for publication; registry acceptance and stable promotion are pending.
 - Extend OpenAPI to 1.3.0 and the schema to migration 9 for arbitrary files and readable reports.
 - Preserve reviewed client contracts for old pending requests; prepare update acceptance from the existing published baselines.
 - Document PDF download fallback, readable reports and recovery requirements after the schema migration.
+- Include arbitrary-file originals in backup, verification and restore; reject unsafe paths and corrupted contents.
+- Upgrade backup tools explicitly with the application/schema while retaining PostgreSQL and gateway; recover newer safety backups after restoring an earlier release.
 
 ## 0.1.4 — 2026-10-11
 

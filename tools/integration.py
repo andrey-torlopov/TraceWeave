@@ -2,6 +2,7 @@
 """Real Docker acceptance using only a marked synthetic installation. No endpoint mocks."""
 from __future__ import annotations
 import argparse
+from collections import Counter
 import hashlib
 import http.client
 from http.cookies import SimpleCookie
@@ -14,7 +15,7 @@ import select
 import subprocess
 import sys
 import time
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 import uuid
 import zipfile
 
@@ -37,11 +38,15 @@ class Client:
         if os.environ.get('TW_VALIDATE_HTTP_CONTRACT')=='1':
             from tools.http_contract import HTTPContractValidator
             self.http_contract=HTTPContractValidator()
-    def request(self,method,path,value=None,raw=None,headers=None,expected=200,require_json=False):
-        h={'Accept':'application/json'}
+    def request(self,method,path,value=None,raw=None,headers=None,expected=200,require_json=False,native=False):
+        if native:
+            require(method in ['GET','HEAD'] and value is None and raw is None,'Native downloads must be bodyless GET/HEAD requests.')
+            require(not any(name.lower() in ['x-traceweave-account-id','x-traceweave-client-contract'] for name in (headers or {})),
+                'Native download checks must not send custom account/contract headers.')
+        h={'Accept':'*/*' if native else 'application/json'}
         if self.cookie:h['Cookie']=self.cookie
-        if self.owner:h['X-TraceWeave-Account-ID']=self.owner
-        if self.contract:h['X-TraceWeave-Client-Contract']=self.contract
+        if self.owner and not native:h['X-TraceWeave-Account-ID']=self.owner
+        if self.contract and not native:h['X-TraceWeave-Client-Contract']=self.contract
         if method in ['POST','PUT','PATCH','DELETE']:
             h['Origin']=self.origin
             if self.csrf:h['X-CSRF-Token']=self.csrf
@@ -228,6 +233,139 @@ def node_deletion_smoke(owner):
         'Changed deletion replay was accepted or changed the graph/revision.')
     print('PASS real node deletion: incoming/outgoing/parallel/undirected cascade, atomic rejection/rollback, exact replay, retained metadata/original and active asset usage.',flush=True)
 
+def verify_file_report_archive(archive,kind,fixture):
+    """Check original multiplicity, links and reading/raw content without extracting ZIPs."""
+    with zipfile.ZipFile(io.BytesIO(archive)) as zipped:
+        names=[entry.filename for entry in zipped.infolist() if not entry.is_dir()]
+        require(len(names)==len(set(names)) and zipped.testzip() is None,'Export contains duplicate paths or corrupt ZIP entries.')
+        if kind=='readable_report':
+            require('report.md' in names and all(name=='report.md' or name.startswith('Attachments/') and len(name.split('/'))==2 for name in names),
+                'Readable export must contain one report and its originals only.')
+            attachments=[name for name in names if name.startswith('Attachments/')]
+            # Counting values matters: uploading identical bytes twice must export two copies.
+            require(Counter(zipped.read(name) for name in attachments)==Counter(fixture['originals'].values()),
+                'Readable export changed, omitted or deduplicated an original.')
+            report=zipped.read('report.md').decode('utf-8')
+            require(fixture['title'] in report and fixture['body'] in report,'Readable export lost the document content.')
+            require(all(quote(name,safe='/') in report for name in attachments),'Readable export has an unlinked original.')
+            identifiers=[fixture['path'].rsplit('/',1)[-1],fixture['node'],*fixture['originals']]
+            require(not any(identifier in report or any(identifier in name for name in names) for identifier in identifiers),
+                'Readable export exposed internal identifiers.')
+        else:
+            require(kind=='obsidian_vault','Unknown file/report acceptance export kind.')
+            require('metadata/snapshot.json' in names and 'metadata/files.json' in names,'Raw export lost its metadata.')
+            files=json.loads(zipped.read('metadata/files.json'))['assets']
+            require(set(files)==set(fixture['originals']) and len(set(files.values()))==len(files),
+                'Raw export changed or deduplicated asset identities.')
+            for asset,data in fixture['originals'].items():
+                require(files[asset].startswith('Attachments/Files/') and zipped.read(files[asset])==data,'Raw export changed an original.')
+            snapshot=json.loads(zipped.read('metadata/snapshot.json'))
+            nodes=[node for node in snapshot['nodes'] if node['id']==fixture['node']]
+            require(len(nodes)==1 and nodes[0]['title']==fixture['title'] and nodes[0]['bodyMarkdown']==fixture['body'],
+                'Raw export lost the document content.')
+            require({asset['id'] for asset in snapshot['assets']}==set(fixture['originals']),'Raw snapshot lost asset identities.')
+
+def create_file_report_exports(owner,fixture):
+    captures={};path=fixture['path'];revision=owner.json('GET',path)['revision']
+    for kind in ['obsidian_vault','readable_report']:
+        body={'kind':kind,'sourceRevision':revision,'idempotencyKey':uid()}
+        job=owner.json('POST',path+'/exports',body,expected=202)
+        replay=owner.json('POST',path+'/exports',body,expected=202)
+        require(replay['id']==job['id'],'File/report export retry created a second job.')
+        export=path+'/exports/'+job['id'];deadline=time.monotonic()+90
+        while time.monotonic()<deadline:
+            job=owner.json('GET',export)
+            if job['state'] in ['succeeded','failed','cancelled']:break
+            time.sleep(.1)
+        require(job['state']=='succeeded' and job['kind']==kind and job['sourceRevision']==revision,'File/report export did not finish its captured revision.')
+        archive,headers=owner.request('GET',export+'/download',native=True)
+        require(hashlib.sha256(archive).hexdigest()==job['sha256'] and len(archive)==job['byteSize'],'File/report ZIP checksum or length differs.')
+        require(headers.get('content-type')=='application/zip' and headers.get('content-disposition','').startswith('attachment;'),'Export download headers are unsafe.')
+        verify_file_report_archive(archive,kind,fixture)
+        captures[kind]={'path':export,'bytes':archive}
+    return captures
+
+def verify_file_report_smoke(owner,fixture,*,restored=False):
+    """Verify retained originals; after restore recreate deliberately transient ZIPs."""
+    path=fixture['path'];document=owner.json('GET',path+'/nodes/'+fixture['node'])
+    require(document['node']['title']==fixture['title'] and document['node']['bodyMarkdown']==fixture['body'],'File/report fixture document changed.')
+    attachments={item['id']:item['assetId'] for item in document['attachments']}
+    require(all(attachments.get(key)==asset for key,asset in fixture['attachments'].items()),'File attachment identities were lost or deduplicated.')
+    for asset,data in fixture['originals'].items():
+        metadata=owner.json('GET',path+'/assets/'+asset)['asset']
+        require(metadata==fixture['assets'][asset],'Registered file metadata changed.')
+        content=path+'/assets/'+asset+'/content'
+        for method in ['GET','HEAD']:
+            received,headers=owner.request(method,content,native=True)
+            require(received==(data if method=='GET' else b''),'Native file download changed the original bytes.')
+            require(headers.get('content-length')==str(len(data)) and headers.get('content-type')==metadata['mimeType'],'Native file download MIME/length differs.')
+            require(headers.get('x-content-type-options')=='nosniff' and headers.get('content-disposition','').startswith('attachment;'),
+                'Native generic/PDF download must remain a nosniff attachment.')
+            require("filename*=UTF-8''"+quote(metadata['originalName'],safe='') in headers['content-disposition'],'Native download lost its original filename.')
+            require(headers.get('etag')=='"'+hashlib.sha256(data).hexdigest()+'"','Native file download checksum differs.')
+        if data:require(owner.request('GET',content,native=True,headers={'Range':'bytes=0-0'},expected=206)[0]==data[:1],'Native file Range differs.')
+    for kind,capture in fixture['exports'].items():
+        job=owner.json('GET',capture['path'])
+        if restored:
+            require(job['state']=='failed' and job['error']['code']=='export_interrupted' and not job['downloadAvailable'],
+                'Restore must invalidate transient exports explicitly.')
+        else:
+            require(job['state']=='succeeded','Persisted export is no longer available.')
+            archive,headers=owner.request('GET',capture['path']+'/download',native=True)
+            require(archive==capture['bytes'],'A completed export changed after capture.')
+            require(owner.request('HEAD',capture['path']+'/download',native=True)[1].get('content-length')==str(len(archive)),
+                'Native export HEAD length differs.')
+            verify_file_report_archive(archive,kind,fixture)
+    if restored:
+        captures=create_file_report_exports(owner,fixture)
+        with zipfile.ZipFile(io.BytesIO(captures['readable_report']['bytes'])) as fresh, zipfile.ZipFile(io.BytesIO(fixture['exports']['readable_report']['bytes'])) as prior:
+            require(fresh.read('report.md')==prior.read('report.md'),'Restored reading report content changed.')
+        return captures
+    return fixture['exports']
+
+def file_report_smoke(owner,*,path=None,node=None):
+    """Reusable real HTTP fixture for initial Docker acceptance and post-upgrade checks.
+
+    Returns path/node, originals {assetId: bytes}, assets {assetId: metadata},
+    attachments {attachmentId: assetId}, and exports {kind: {path, bytes}}.
+    Retain the fixture in memory for restart or backup restore verification.
+    """
+    require((path is None)==(node is None),'Supply both existing investigation and node, or neither.')
+    if path is None:
+        investigation=owner.create('File report acceptance '+uid());path='/api/v1/investigations/'+investigation['id']
+        graph=owner.json('GET',path+'/graph');note=next(item['id'] for item in graph['nodeTypes'] if item['code']=='note');node=uid()
+        owner.commands(path,[{'kind':'node.create','node':{'id':node,'typeId':note,'title':'File report document',
+            'bodyMarkdown':'Immutable file report content survives backup'},'position':{'x':12,'y':34}}])
+    document=owner.json('GET',path+'/nodes/'+node)['node']
+    fixture={'path':path,'node':node,'title':document['title'],'body':document['bodyMarkdown'],'originals':{},'assets':{},'attachments':{},'exports':{}}
+    generic=b'\x00\x01\xffSynthetic binary\x00\r\n'
+    pdf=b'%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n'
+    originals=[('данные.bin','application/octet-stream',generic),('документ.pdf','application/pdf',pdf),
+        ('пустой.txt','application/octet-stream',b''),('данные.bin','application/octet-stream',generic)]
+    uploads=[]
+    for index,(name,mime,data) in enumerate(originals):
+        digest=hashlib.sha256(data).hexdigest()
+        ticket=owner.json('POST',path+'/uploads',{'idempotencyKey':uid(),'originalName':name,'expectedMimeType':mime,'expectedByteSize':len(data)},expected=201)
+        uploads.append(ticket['id'])
+        complete=owner.json('PUT',path+'/uploads/'+ticket['id']+'/content',raw=data,headers={'Content-Type':'application/octet-stream'})
+        require(complete['state']=='completed' and complete['sha256']==digest and complete['receivedBytes']==len(data)
+            and complete['mediaKind']=='file' and complete['verifiedMimeType']==mime,
+            'Generic/PDF/empty upload classification or checksum differs.')
+        asset=uid();attachment=uid()
+        owner.commands(path,[{'kind':'asset.register','uploadId':ticket['id'],'assetId':asset,'metadata':{'title':'File material '+str(index+1),
+            'sourceUrl':None,'sourceAuthor':None,'sourceCreatedAt':None,'noteMarkdown':''}},
+            {'kind':'attachment.attach','attachment':{'id':attachment,'nodeId':node,'assetId':asset,'role':'attachment','caption':None,'sortOrder':index}}])
+        metadata=owner.json('GET',path+'/assets/'+asset)['asset']
+        require(metadata['id']==asset and metadata['originalName']==name and metadata['mediaKind']=='file' and metadata['mimeType']==mime
+            and metadata['sha256']==digest and metadata['byteSize']==len(data),'Registered generic/PDF/empty asset differs from its upload.')
+        fixture['originals'][asset]=data;fixture['assets'][asset]=metadata;fixture['attachments'][attachment]=asset
+    require(len(set(uploads))==len(originals) and len(fixture['originals'])==len(originals) and len(fixture['attachments'])==len(originals),
+        'Repeated file upload must create independent upload, asset and attachment identities.')
+    fixture['exports']=create_file_report_exports(owner,fixture)
+    verify_file_report_smoke(owner,fixture)
+    print('PASS generic/PDF/empty files, independent repeated upload, native cookie-only GET/HEAD/Range and byte-exact raw/readable exports.',flush=True)
+    return fixture
+
 def smoke(runtime,origin):
     owner=Client(origin);session=owner.login();require(session['user']['email']==EMAIL,'Canonical email missing.')
     require(owner.json('GET','/api/v1/accounts/config')['registrationEnabled'] is False,'Local registration must be disabled.')
@@ -235,7 +373,8 @@ def smoke(runtime,origin):
     graph=owner.json('GET',path+'/graph');note=next(t['id'] for t in graph['nodeTypes'] if t['code']=='note');node=uid()
     batch=owner.commands(path,[{'kind':'node.create','node':{'id':node,'typeId':note,'title':'Docker document','bodyMarkdown':'Docker content survives restart'},'position':{'x':12,'y':34}}])
     require(owner.json('GET',path+'/nodes/'+node)['node']['title']=='Docker document','Document read failed.')
-    fixtures=ROOT/'tests/fixtures/media';originals={};assets=[]
+    files=file_report_smoke(owner,path=path,node=node)
+    fixtures=ROOT/'tests/fixtures/media';originals=dict(files['originals']);assets=list(originals)
     for item in json.loads((fixtures/'manifest.json').read_text()):
         if not item['name'].startswith('synthetic.'):continue
         data=(fixtures/item['name']).read_bytes();require(hashlib.sha256(data).hexdigest()==item['sha256'],'Synthetic fixture checksum mismatch.')
@@ -265,6 +404,12 @@ def smoke(runtime,origin):
     require(inv['id'] not in [i['id'] for i in second.json('GET','/api/v1/investigations')['items']],'Foreign investigation leaked in list.')
     for method,target in [('GET',path),('GET',path+'/graph'),('GET',path+'/nodes/'+node),('GET',export),('GET',export+'/download'),('HEAD',path+'/assets/'+assets[0]+'/content'),('GET',path+'/assets/'+assets[0]+'/content')]:
         second.request(method,target,expected=404)
+    for asset in files['originals']:
+        for method in ['GET','HEAD']:second.request(method,path+'/assets/'+asset+'/content',native=True,expected=404)
+    for capture in files['exports'].values():
+        second.request('GET',capture['path'],expected=404)
+        for method in ['GET','HEAD']:second.request(method,capture['path']+'/download',native=True,expected=404)
+    verify_file_report_smoke(owner,files)
     second.request('POST',path+'/commands',batch,expected=404)
     owner.request('GET',path,headers={'X-TraceWeave-Account-ID':second.owner},expected=409)
     owner.request('POST',path+'/commands',batch,headers={'X-TraceWeave-Client-Contract':'0'*64},expected=409)
@@ -290,7 +435,7 @@ def main():
     cli(runtime,'bootstrap','--release',str(Path(a.release).resolve()),'--origin',origin)
     cli(runtime,'restart')
     require(owner.json('GET',path+'/nodes/'+node)['node']['bodyMarkdown']=='Docker content survives restart','Restart lost document.')
-    for asset,data in originals.items():require(owner.request('GET',path+'/assets/'+asset+'/content')[0]==data,'Restart lost original.')
+    for asset,data in originals.items():require(owner.request('GET',path+'/assets/'+asset+'/content',native=True)[0]==data,'Restart lost original.')
     cli(runtime,'maintenance','on')
     for target in ['/','/api/v1/session']:
         body,headers=owner.request('GET',target,expected=503)
@@ -306,7 +451,7 @@ def main():
     require(owner.json('GET','/api/v1/session')['authenticated'] is False,'Restore did not revoke old session.')
     owner.login();require(owner.json('GET',path+'/nodes/'+node)['node']['bodyMarkdown']=='Docker content survives restart','Restore lost document.')
     owner.request('GET','/api/v1/investigations/'+added['id'],expected=404)
-    for asset,data in originals.items():require(owner.request('GET',path+'/assets/'+asset+'/content')[0]==data,'Restore lost original.')
+    for asset,data in originals.items():require(owner.request('GET',path+'/assets/'+asset+'/content',native=True)[0]==data,'Restore lost original.')
     new=json.loads((runtime/'installation.json').read_text())['volumes'];require(new['database']!=old['database'] and new['files']!=old['files'],'Restore overwrote original volumes.')
     print('PASS repeat bootstrap, persistent restart, real maintenance/release, backup hashes, restore into new volumes and session revocation.',flush=True)
     cli(runtime,'stop')

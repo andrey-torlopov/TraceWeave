@@ -267,6 +267,138 @@ class OpsTests(unittest.TestCase):
         self.disk_usage.assert_called_once_with(self.state / "backups")
         self.assertTrue(connection.closed)
 
+    def test_backup_verify_restore_preserves_files_and_existing_storage_categories(self):
+        fixtures = Path(__file__).parent / "fixtures" / "media"
+        payloads = {}
+        for category, contents in [
+            ("", (fixtures / "synthetic.txt").read_bytes()),
+            ("images", (fixtures / "synthetic.png").read_bytes()),
+            ("audio", (fixtures / "synthetic.wav").read_bytes()),
+            ("video", (fixtures / "synthetic.mp4").read_bytes()),
+            ("files", b"\x00\xffSynthetic arbitrary attachment\x00"),
+            ("files", b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n"),
+            ("files", b""),
+        ]:
+            digest = hashlib.sha256(contents).hexdigest()
+            key = (category + "/" if category else "") + digest[:2] + "/" + digest
+            payloads[key] = contents
+            original = self.data / "blobs" / key
+            original.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+            original.write_bytes(contents)
+            original.chmod(0o400)
+        entries = [{"path": key, "bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest()}
+                   for key, contents in sorted(payloads.items())]
+        (self.state / "release.json").write_text(json.dumps(self.value["release"]))
+        backup_connection = FakeConnection()
+
+        def dump(arguments, connection, output=None):
+            self.assertEqual(arguments[0], "pg_dump")
+            self.assertIs(connection, backup_connection)
+            output.write(b"Synthetic mixed original database dump.\n")
+
+        with patch.object(ops, "connect", return_value=backup_connection), \
+                patch.object(ops, "snapshot", return_value=("18.6", entries)), \
+                patch.object(ops, "history", return_value=self.migrations), \
+                patch.object(ops, "checked_process", side_effect=dump) as dumping, \
+                patch.object(ops, "operator_owned"), patch.object(ops.os, "chown"), \
+                contextlib.redirect_stdout(io.StringIO()):
+            ops.backup("mixed-originals")
+        dumping.assert_called_once()
+        self.assertTrue(backup_connection.closed)
+        backup_root, manifest = ops.validate_backup("mixed-originals")
+        self.assertEqual(manifest["originals"], entries)
+        self.assertEqual(manifest["databaseOriginals"], entries)
+        self.assertEqual(manifest["dumpSHA256"], ops.sha(backup_root / "database.dump"))
+
+        restored_data = Path(self.temporary.name) / "restored-data"
+        (restored_data / "blobs").mkdir(parents=True, mode=0o700)
+        restore_connection = FakeConnection()
+        with patch.object(ops, "DATA", restored_data), \
+                patch.object(ops, "connect", return_value=restore_connection), \
+                patch.object(ops, "snapshot", return_value=("18.6", entries)), \
+                patch.object(ops, "history", return_value=self.migrations), \
+                patch.object(ops, "checked_process") as restoring, \
+                patch.object(ops.os, "chown"), contextlib.redirect_stdout(io.StringIO()):
+            ops.restore("mixed-originals")
+        restoring.assert_called_once()
+        self.assertEqual(restoring.call_args.args[0][0], "pg_restore")
+        self.assertTrue(restore_connection.closed)
+        for key, contents in payloads.items():
+            with self.subTest(storage_key=key):
+                original = self.data / "blobs" / key
+                backup_file = backup_root / "blobs" / key
+                restored = restored_data / "blobs" / key
+                for path in [original, backup_file, restored]:
+                    self.assertEqual(path.read_bytes(), contents)
+                    self.assertEqual(ops.sha(path), hashlib.sha256(contents).hexdigest())
+                self.assertEqual(stat.S_IMODE(original.stat().st_mode), 0o400)
+                self.assertEqual(stat.S_IMODE(restored.stat().st_mode), 0o400)
+        self.assertEqual(sorted(path.relative_to(restored_data / "blobs").as_posix()
+                                for path in ops.safe_files(restored_data / "blobs")), sorted(payloads))
+
+    def test_file_storage_keys_reject_traversal_and_bad_digest_before_restore(self):
+        digest = self.entry["sha256"]
+        invalid_keys = ["files/../" + digest, "/files/aa/" + digest,
+                        "files/aa/" + digest[:-1], "files/aa/" + "g" * 64,
+                        "files/aa/" + digest + ".bin", "files\\aa\\" + digest]
+        for key in invalid_keys:
+            with self.subTest(storage_key=key):
+                self.value["originals"] = [{**self.entry, "path": key}]
+                self.write_manifest()
+                with patch.object(ops, "connect") as connecting, \
+                        patch.object(ops, "checked_process") as process:
+                    with self.assertRaisesRegex(RuntimeError, "original key"):
+                        ops.restore(self.name)
+                connecting.assert_not_called()
+                process.assert_not_called()
+        self.pg_restore.assert_not_called()
+        self.assertEqual(list((self.data / "blobs").iterdir()), [])
+
+    def test_files_symlink_rejected_before_backup_or_restore_mutation(self):
+        outside = Path(self.temporary.name) / "outside-file"
+        outside.write_bytes(b"Synthetic file outside the originals directory.")
+        key = "files/aa/" + "a" * 64
+        linked_original = self.data / "blobs" / key
+        linked_original.parent.mkdir(parents=True, mode=0o700)
+        linked_original.symlink_to(outside)
+        connection = FakeConnection()
+        stack, process = self.backup_patches(connection)
+        with stack, self.assertRaisesRegex(RuntimeError, "Symlinks"):
+            ops.backup("linked-files")
+        process.assert_not_called()
+        self.assertFalse((self.state / "backups" / "linked-files").exists())
+        linked_backup = self.root / "blobs" / key
+        linked_backup.parent.mkdir(parents=True, mode=0o700)
+        linked_backup.symlink_to(outside)
+        with patch.object(ops, "connect") as connecting, \
+                patch.object(ops, "checked_process") as restoring:
+            with self.assertRaisesRegex(RuntimeError, "Symlinks"):
+                ops.restore(self.name)
+        connecting.assert_not_called()
+        restoring.assert_not_called()
+        self.pg_restore.assert_not_called()
+        self.assertEqual(outside.read_bytes(), b"Synthetic file outside the originals directory.")
+
+    def test_file_digest_mismatch_rejected_before_restore_mutation(self):
+        key = "files/" + self.entry["sha256"][:2] + "/" + self.entry["sha256"]
+        corrupted = self.root / "blobs" / key
+        corrupted.parent.mkdir(parents=True, mode=0o700)
+        self.original.rename(corrupted)
+        corrupted.write_bytes(b"X" * len(self.contents))
+        entry = {**self.entry, "path": key}
+        self.value.update(originals=[entry], databaseOriginals=[entry])
+        self.write_manifest()
+        with patch.object(ops, "connect") as connecting, \
+                patch.object(ops, "checked_process") as process, \
+                patch.object(ops, "copy_file") as copying:
+            with self.assertRaisesRegex(RuntimeError, "original checksum"):
+                ops.restore(self.name)
+        connecting.assert_not_called()
+        process.assert_not_called()
+        copying.assert_not_called()
+        self.pg_restore.assert_not_called()
+        self.assertEqual(list((self.data / "blobs").iterdir()), [])
+
     def test_backup_low_disk_counts_unreferenced_originals_and_writes_nothing(self):
         connection = FakeConnection()
         stack, process = self.backup_patches(connection)

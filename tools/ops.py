@@ -206,7 +206,7 @@ def backup(name):
         originals=DATA/'blobs'; sources=safe_files(originals)
         for source in sources:
             relative=source.relative_to(originals).as_posix()
-            if not re.fullmatch(r'(?:(?:images|audio|video)/)?[a-f0-9]{2}/[a-f0-9]{64}',relative):fail('Unexpected original storage key.')
+            if not re.fullmatch(r'(?:(?:images|audio|video|files)/)?[a-f0-9]{2}/[a-f0-9]{64}',relative):fail('Unexpected original storage key.')
         database_size=database_bytes(c)
         required=capacity_budget(database_size,sum(source.stat().st_size for source in sources))
         backup_storage=destination.parent if destination.parent.exists() else STATE
@@ -221,7 +221,7 @@ def backup(name):
         manifest=[]
         for source in sources:
             relative=source.relative_to(originals).as_posix()
-            if not re.fullmatch(r'(?:(?:images|audio|video)/)?[a-f0-9]{2}/[a-f0-9]{64}',relative):fail('Unexpected original storage key.')
+            if not re.fullmatch(r'(?:(?:images|audio|video|files)/)?[a-f0-9]{2}/[a-f0-9]{64}',relative):fail('Unexpected original storage key.')
             target=out/relative;copy_file(source,target,c)
             manifest.append({'path':relative,'bytes':target.stat().st_size,'sha256':sha(target)})
         by_path={item['path']:item for item in manifest}
@@ -252,7 +252,7 @@ def validate_backup(name):
     by_path={}
     for entry in value['originals']:
         key=entry['path']
-        if key in expected or not re.fullmatch(r'(?:(?:images|audio|video)/)?[a-f0-9]{2}/[a-f0-9]{64}',key):fail('Invalid/duplicate original key.')
+        if key in expected or not re.fullmatch(r'(?:(?:images|audio|video|files)/)?[a-f0-9]{2}/[a-f0-9]{64}',key):fail('Invalid/duplicate original key.')
         expected.add(key);p=root/'blobs'/key
         if p.stat().st_size!=entry['bytes'] or sha(p)!=entry['sha256']:fail('Backup original checksum mismatch.')
         by_path[key]=entry
