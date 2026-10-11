@@ -18,7 +18,7 @@ from tools import control, integration
 from tools import published_update_test as previous
 from tools.update_integration import prepare_batch, apply_prepared_and_edit
 require = integration.require
-TARGET_VERSION = '0.1.8'
+TARGET_VERSION = '0.1.9'
 TARGET_SCHEMA = 10
 BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'),
          'retained': ('0.1.3-update.json', '0.1.3'), 'full': ('0.1.3.json', '0.1.3'),
@@ -42,6 +42,22 @@ BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'
          'v017-update-infra-0.1.4': ('0.1.7-update-infra-0.1.4.json', '0.1.7'),
          'v017-update-infra-0.1.6': ('0.1.7-update-infra-0.1.6.json', '0.1.7'),
          'v017-full': ('0.1.7.json', '0.1.7'),
+         'v018-update-from-0.1.6-infra-0.1.0': ('0.1.8-update-from-0.1.6-infra-0.1.0.json', '0.1.8'),
+         'v018-update-from-0.1.6-infra-0.1.1': ('0.1.8-update-from-0.1.6-infra-0.1.1.json', '0.1.8'),
+         'v018-update-from-0.1.6-infra-0.1.3': ('0.1.8-update-from-0.1.6-infra-0.1.3.json', '0.1.8'),
+         'v018-update-from-0.1.6-infra-0.1.4': ('0.1.8-update-from-0.1.6-infra-0.1.4.json', '0.1.8'),
+         'v018-update-from-0.1.7-infra-0.1.0': ('0.1.8-update-from-0.1.7-infra-0.1.0.json', '0.1.8'),
+         'v018-update-from-0.1.7-infra-0.1.1': ('0.1.8-update-from-0.1.7-infra-0.1.1.json', '0.1.8'),
+         'v018-update-from-0.1.7-infra-0.1.3': ('0.1.8-update-from-0.1.7-infra-0.1.3.json', '0.1.8'),
+         'v018-update-from-0.1.7-infra-0.1.4': ('0.1.8-update-from-0.1.7-infra-0.1.4.json', '0.1.8'),
+         'v018-update-from-0.1.7-infra-0.1.6': ('0.1.8-update-from-0.1.7-infra-0.1.6.json', '0.1.8'),
+         'v018-update-infra-0.1.0': ('0.1.8-update-infra-0.1.0.json', '0.1.8'),
+         'v018-update-infra-0.1.1': ('0.1.8-update-infra-0.1.1.json', '0.1.8'),
+         'v018-update-infra-0.1.3': ('0.1.8-update-infra-0.1.3.json', '0.1.8'),
+         'v018-update-infra-0.1.4': ('0.1.8-update-infra-0.1.4.json', '0.1.8'),
+         'v018-update-infra-0.1.6': ('0.1.8-update-infra-0.1.6.json', '0.1.8'),
+         'v018-update-infra-0.1.7': ('0.1.8-update-infra-0.1.7.json', '0.1.8'),
+         'v018-full': ('0.1.8.json', '0.1.8'),
          }
 CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
           'guided_automatic_backup_migration', 'graph_settings_frontend_asset', 'old_pending_relation_exact_replay',
@@ -53,7 +69,7 @@ CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
 def compatible(base, candidate):
     previous.published_manifest(candidate, TARGET_VERSION)
     control.validate_manifest(base)
-    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4', '0.1.6', '0.1.7'], 'Expected previous application pair.')
+    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4', '0.1.6', '0.1.7', '0.1.8'], 'Expected previous application pair.')
     require(len(base['migrations']) in [6, 7, 9, 10] and len(candidate['migrations']) == TARGET_SCHEMA and
             candidate['migrations'][:len(base['migrations'])] == base['migrations'], 'Existing migration history must be preserved.')
     feature_migrations = [{'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()}
@@ -83,9 +99,8 @@ def compatible(base, candidate):
 def compatible_name(base):
     gateway = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['gateway']).group(1)
     tools = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['tools']).group(1)
-    # Retained gateways can now coexist with newer tools; their exact from-images differ.
-    prefix = '-update-from-' + base['releaseId'] if tools != gateway else '-update'
-    return TARGET_VERSION + prefix + '-infra-' + gateway + '.json'
+    # Application version alone is ambiguous after repeated same-schema updates.
+    return TARGET_VERSION + '-update-tools-' + tools + '-infra-' + gateway + '.json'
 
 
 def pull_images(base, selected, arch):
@@ -251,7 +266,7 @@ def verify(args, evidence):
         # A catalog-only release can ship byte-identical frontend JS; release metadata
         # and replaced container IDs above verify the selected frontend version.
         current_asset = owner.request('GET', current_entry)[0].decode('utf-8')
-        require(all(text in current_asset for text in ['Настройки графа', 'Уменьшение карточки до узла, раз', 'Восстановлено текущее значение']), 'Published frontend omits graph settings.')
+        require(all(text in current_asset for text in ['Настройки графа', 'Уменьшение карточки до узла, раз', 'Размер иконки, высот карточки', 'Восстановлено текущее значение']), 'Published frontend omits graph settings.')
         evidence['checks']['graph_settings_frontend_asset'] = 'passed'
         evidence['activeCheck'] = 'old_pending_relation_exact_replay'
         apply_prepared_and_edit(owner, path, prepared)

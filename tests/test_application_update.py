@@ -19,10 +19,10 @@ class ApplicationUpdateTests(unittest.TestCase):
         # Synthetic in-memory validation input, never written as a release or pulled.
         value = json.loads((ROOT / 'releases/0.1.4.json').read_text())
         for key in ['releaseId', 'frontendReleaseId', 'frontendVersion', 'backendVersion']:
-            value[key] = '0.1.8'
+            value[key] = '0.1.9'
         for key in ['backend', 'frontend', 'gateway', 'tools']:
             digest = hashlib.sha256(('synthetic application update unit fixture ' + key).encode()).hexdigest()
-            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.1.8@sha256:' + digest
+            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.1.9@sha256:' + digest
         contract = hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest()
         value['contractHash'] = value['backendContractHash'] = contract
         value['supportedClientContractHashes'] = [contract] + json.loads((ROOT / 'contracts/client-compatibility.json').read_text())
@@ -41,7 +41,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 selected = application_update_test.compatible(base, candidate)
                 control.validate_update(base, selected)
                 self.assertEqual((base, candidate), before)
-                self.assertEqual(selected['releaseId'], '0.1.8')
+                self.assertEqual(selected['releaseId'], '0.1.9')
                 same_schema = base['migrations'] == candidate['migrations']
                 self.assertEqual(set(control.changes(base, selected)), {'backend', 'frontend'} if same_schema else {'backend', 'frontend', 'tools'})
                 for key in ['postgres', 'gateway']:
@@ -58,7 +58,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                     self.assertEqual(selected['source']['toolsDiffHash'], candidate['source']['deliveryDiffHash'])
                 self.assertEqual(selected['migrations'][:len(base['migrations'])], base['migrations'])
                 self.assertEqual(len(selected['migrations']), 10)
-                self.assertEqual(selected['migrations'] == base['migrations'], version == '0.1.7')
+                self.assertEqual(selected['migrations'] == base['migrations'], version in ['0.1.7', '0.1.8'])
                 for key in ['delivery', 'deliveryDiffHash']:
                     self.assertEqual(selected['source'][key], base['source'][key])
                 self.assertTrue(set(base['supportedClientContractHashes']) <= set(selected['supportedClientContractHashes']))
@@ -80,7 +80,8 @@ class ApplicationUpdateTests(unittest.TestCase):
     def test_same_gateway_with_different_tools_selects_the_exact_from_version(self):
         candidate = self.candidate()
         bases = [json.loads((ROOT / 'releases' / name).read_text()) for name in
-                 ['0.1.4-update-infra-0.1.0.json', '0.1.6-update-infra-0.1.0.json']]
+                 ['0.1.8-update-from-0.1.6-infra-0.1.0.json', '0.1.8-update-from-0.1.7-infra-0.1.0.json']]
+        self.assertEqual(bases[0]['releaseId'], bases[1]['releaseId'])
         self.assertEqual(bases[0]['images']['gateway'], bases[1]['images']['gateway'])
         self.assertNotEqual(bases[0]['images']['tools'], bases[1]['images']['tools'])
         with tempfile.TemporaryDirectory() as directory:
@@ -105,7 +106,7 @@ class ApplicationUpdateTests(unittest.TestCase):
             if name in variants:
                 self.assertEqual(variants[name], selected, filename)
             variants[name] = selected
-        self.assertEqual(len(variants), 15)
+        self.assertEqual(len(variants), 21)
 
     def test_published_older_tools_are_trusted_for_restore_by_local_release_catalog(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(control, 'RUNTIME', Path(directory)):
@@ -184,8 +185,8 @@ class ApplicationUpdateTests(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / '.github/workflows/application-update.yml').read_text())
         matrix = workflow['jobs']['published-update']['strategy']['matrix']['include']
         pairs = {(item['base'], item['arch']) for item in matrix}
-        self.assertEqual(len(application_update_test.BASES), 24)
-        self.assertEqual(len(matrix), 48)
+        self.assertEqual(len(application_update_test.BASES), 40)
+        self.assertEqual(len(matrix), 80)
         self.assertEqual(pairs, {(base, arch) for base in application_update_test.BASES for arch in ['amd64', 'arm64']})
         for item in matrix:
             base = json.loads((ROOT / 'releases' / application_update_test.BASES[item['base']][0]).read_text())

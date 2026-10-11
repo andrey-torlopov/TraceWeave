@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9 — 2026-10-11 (publication candidate)
+
+- Deliver configurable card-to-icon thresholds and icon diameter with centered graph geometry.
+- Select update manifests by exact installed tools/gateway versions, including same-application variants.
+- Retain schema 10 and verify updates from all 40 previously published baselines on native amd64/arm64.
+
 ## 0.1.8 — 2026-10-11
 
 - Deliver the multiple-attachment preview switcher with unchanged API 1.3.0 and schema 10.
