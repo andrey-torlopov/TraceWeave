@@ -18,9 +18,15 @@ from tools import control, integration
 from tools import published_update_test as previous
 from tools.update_integration import prepare_batch, apply_prepared_and_edit
 require = integration.require
+TARGET_VERSION = '0.1.5'
+TARGET_SCHEMA = 9
 BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'),
          'retained': ('0.1.3-update.json', '0.1.3'), 'full': ('0.1.3.json', '0.1.3'),
-         'retained-v011': ('0.1.3-update-from-0.1.1.json', '0.1.3')}
+         'retained-v011': ('0.1.3-update-from-0.1.1.json', '0.1.3'),
+         'v014-full': ('0.1.4.json', '0.1.4'),
+         'v014-infra-v010': ('0.1.4-update-infra-0.1.0.json', '0.1.4'),
+         'v014-infra-v011': ('0.1.4-update-infra-0.1.1.json', '0.1.4'),
+         'v014-infra-v013': ('0.1.4-update-infra-0.1.3.json', '0.1.4')}
 CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
           'guided_automatic_backup_migration', 'graph_settings_frontend_asset', 'old_pending_relation_exact_replay',
           'parallel_four_directions_and_isolated_deletion', 'repeat_bootstrap',
@@ -28,17 +34,20 @@ CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
 
 
 def compatible(base, candidate):
-    previous.published_manifest(candidate, '0.1.4')
+    previous.published_manifest(candidate, TARGET_VERSION)
     control.validate_manifest(base)
-    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3'], 'Expected previous application pair.')
-    require(len(base['migrations']) in [6, 7] and len(candidate['migrations']) == 7 and
+    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4'], 'Expected previous application pair.')
+    require(len(base['migrations']) in [6, 7] and len(candidate['migrations']) == TARGET_SCHEMA and
             candidate['migrations'][:len(base['migrations'])] == base['migrations'], 'Existing migration history must be preserved.')
+    feature_migrations = [{'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()}
+                          for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql')]]
+    require(candidate['migrations'][-2:] == feature_migrations, 'Candidate feature migrations differ from the harness.')
     result = copy.deepcopy(candidate)
     for key in ['gateway', 'tools', 'postgres']:
         result['images'][key] = base['images'][key]
     for key in ['delivery', 'deliveryDiffHash']:
         result['source'][key] = base['source'][key]
-    result['validation'] = 'Published 0.1.4 applications with retained installation infrastructure; native application-update acceptance required.'
+    result['validation'] = 'Published ' + TARGET_VERSION + ' applications with retained installation infrastructure; native application-update acceptance required.'
     control.validate_update(base, result)
     return result
 
@@ -117,11 +126,11 @@ def preserved_after_restore(owner, fixture, account):
 
 
 def verify(args, evidence):
-    candidate = previous.published_manifest(previous.strict(Path(args.candidate).read_bytes()), '0.1.4')
+    candidate = previous.published_manifest(previous.strict(Path(args.candidate).read_bytes()), TARGET_VERSION)
     filename = BASES[args.base][0]
     base = previous.strict((ROOT / 'releases' / filename).read_bytes())
     selected = compatible(base, candidate)
-    expected_name = '0.1.4-update-infra-' + re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['tools']).group(1) + '.json'
+    expected_name = TARGET_VERSION + '-update-infra-' + re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', base['images']['tools']).group(1) + '.json'
     checked = selected
     require(hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest() == candidate['contractHash'], 'Harness contract differs.')
     git = str(Path(shutil.which('git')).resolve())
@@ -153,7 +162,7 @@ def verify(args, evidence):
         fixture = previous.seed(owner)
         cookie, csrf, account = owner.cookie, owner.csrf, owner.owner
         path = fixture[0]
-        prepared = prepare_batch(owner, path, 'application 0.1.4')
+        prepared = prepare_batch(owner, path, 'application ' + TARGET_VERSION)
         body = json.loads(prepared.raw)
         body['commands'].append({'kind': 'relation.create', 'relation': {'id': integration.uid(), 'sourceNodeId': fixture[1],
             'targetNodeId': prepared.node_id, 'relationType': 'related_to', 'directed': True, 'label': 'Legacy pending relation',
@@ -184,7 +193,7 @@ def verify(args, evidence):
         operator.compose('run', '--rm', '-T', '--no-deps', 'ops', 'verify-backup', backup_name, config=before_config, release=selected, capture=True)
         evidence['checks']['guided_automatic_backup_migration'] = 'passed'
         evidence['activeCheck'] = 'graph_settings_frontend_asset'
-        require(owner.json('GET', '/release.json')['frontendVersion'] == '0.1.4', 'Updated frontend version differs.')
+        require(owner.json('GET', '/release.json')['frontendVersion'] == TARGET_VERSION, 'Updated frontend version differs.')
         current_html = owner.request('GET', '/')[0].decode()
         current_entry = re.search(r'src="(/assets/[^" ]+\.js)"', current_html).group(1)
         require(current_entry != entry, 'The old frontend entry is still selected.')
@@ -250,7 +259,7 @@ def main():
     output = Path(args.output)
     require(not output.exists() and not output.is_symlink(), 'Fresh public evidence directory required.')
     output.mkdir(mode=0o700, parents=True)
-    evidence = {'formatVersion': 1, 'baseRelease': BASES[args.base][1], 'baseInfrastructure': args.base, 'targetRelease': '0.1.4',
+    evidence = {'formatVersion': 1, 'baseRelease': BASES[args.base][1], 'baseInfrastructure': args.base, 'targetRelease': TARGET_VERSION,
                 'nativePlatform': 'linux/' + args.arch, 'anonymousPull': True, 'checks': {}, 'conclusion': 'failed'}
     if os.environ.get('GITHUB_REPOSITORY') and os.environ.get('GITHUB_RUN_ID'):
         evidence['runURL'] = 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID']

@@ -3,7 +3,7 @@
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "TraceWeave P0 API",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Normative E0 contract. JSON-compatible YAML. Unknown fields and duplicate JSON keys are rejected. All domain changes use commands. Technical jobs do not mutate graph data. Definitions and runtime invariants: docs/contract-decisions.md. CR-E8-001: accounts, Docker maintenance and explicit client/account binding."
   },
   "servers": [

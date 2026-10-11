@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 — prepared locally, unpublished — 2026-10-11
+
+- Prepare backend/frontend/delivery 0.1.5 sources locally; no images, release manifests or stable promotion are published.
+- Extend OpenAPI to 1.3.0 and the schema to migration 9 for arbitrary files and readable reports.
+- Preserve reviewed client contracts for old pending requests; prepare update acceptance from the existing published baselines.
+- Document PDF download fallback, readable reports and recovery requirements after the schema migration.
+
 ## 0.1.4 — 2026-10-11
 
 - Add graph settings beside zoom controls with an integer card shrink factor from 2 to 10 (default 3); 5 switches to compact nodes at 20% zoom and below.
