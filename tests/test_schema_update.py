@@ -17,7 +17,7 @@ class SchemaUpdateTests(unittest.TestCase):
         return value
 
     def test_each_reviewed_infrastructure_is_retained_with_additive_schema(self):
-        for filename in ["0.1.1.json", "0.1.1-update.json"]:
+        for filename in ["0.1.0.json", "0.1.1.json", "0.1.1-update.json"]:
             base = json.loads((ROOT / "releases" / filename).read_text())
             selected = schema_update_test.compatible(base, self.candidate())
             control.validate_update(base, selected)

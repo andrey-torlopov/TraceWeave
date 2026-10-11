@@ -27,7 +27,7 @@ CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
 def compatible(base, candidate):
     previous.published_manifest(candidate, '0.1.2')
     control.validate_manifest(base)
-    require(base['backendVersion'] == base['frontendVersion'] == '0.1.1', 'Expected previous application pair.')
+    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1'], 'Expected previous application pair.')
     require(len(base['migrations']) == 6 and len(candidate['migrations']) == 7 and
             candidate['migrations'][:6] == base['migrations'], 'Expected append-only migration 7.')
     result = copy.deepcopy(candidate)
@@ -106,16 +106,16 @@ def relation_regression(owner):
 
 def verify(args, evidence):
     candidate = previous.published_manifest(previous.strict(Path(args.candidate).read_bytes()), '0.1.2')
-    filename = '0.1.1-update.json' if args.base == 'retained' else '0.1.1.json'
+    filename = {'original': '0.1.0.json', 'retained': '0.1.1-update.json', 'full': '0.1.1.json'}[args.base]
     base = previous.strict((ROOT / 'releases' / filename).read_bytes())
     selected = compatible(base, candidate)
-    expected_name = '0.1.2-update.json' if args.base == 'retained' else '0.1.2-update-from-0.1.1.json'
+    expected_name = '0.1.2-update-from-0.1.1.json' if args.base == 'full' else '0.1.2-update.json'
     checked = selected
     require(hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest() == candidate['contractHash'], 'Harness contract differs.')
     git = str(Path(shutil.which('git')).resolve())
     revision = previous.command(git, '-C', str(ROOT), 'rev-parse', 'HEAD')
     previous.checked_source(git, ROOT, revision)
-    evidence.update(source={'base': base['source'], 'target': selected['source']}, guidedOperatorRevision=revision)
+    evidence.update(baseRelease=base['releaseId'], source={'base': base['source'], 'target': selected['source']}, guidedOperatorRevision=revision)
     evidence['activeCheck'] = 'anonymous_native_provenance'
     evidence['images'] = pull_images(base, selected, args.arch)
     evidence['checks']['anonymous_native_provenance'] = 'passed'
@@ -194,7 +194,7 @@ def verify(args, evidence):
         require(operator.current() == base and restored['volumes']['database'] != before_config['volumes']['database'] and
                 restored['volumes']['files'] != before_config['volumes']['files'], 'Schema restore did not use new volumes.')
         previous.preserved(owner, fixture, cookie, csrf, account)
-        require(owner.json('GET', '/release.json')['releaseId'] == '0.1.1', 'Restored frontend differs.')
+        require(owner.json('GET', '/release.json')['releaseId'] == base['releaseId'], 'Restored frontend differs.')
         state = operator.read_json(runtime / 'operation.json')
         require(state['phase'] == 'ready' and state.get('safetyBackup'), 'Restore omitted post-upgrade safety backup.')
         for volume in before_config['volumes'].values(): previous.command('docker', 'volume', 'inspect', volume)
@@ -211,7 +211,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--candidate', required=True); parser.add_argument('--legacy', required=True)
     parser.add_argument('--runtime', required=True); parser.add_argument('--output', required=True)
-    parser.add_argument('--base', choices=['retained', 'full'], required=True)
+    parser.add_argument('--base', choices=['original', 'retained', 'full'], required=True)
     parser.add_argument('--arch', choices=['amd64', 'arm64'], required=True); parser.add_argument('--port', type=int, default=18080)
     args = parser.parse_args()
     require(1024 <= args.port <= 65535, 'Unprivileged loopback port required.')
@@ -220,7 +220,7 @@ def main():
     output = Path(args.output)
     require(not output.exists() and not output.is_symlink(), 'Fresh public evidence directory required.')
     output.mkdir(mode=0o700, parents=True)
-    evidence = {'formatVersion': 1, 'baseRelease': '0.1.1', 'baseInfrastructure': args.base, 'targetRelease': '0.1.2',
+    evidence = {'formatVersion': 1, 'baseRelease': '0.1.0' if args.base == 'original' else '0.1.1', 'baseInfrastructure': args.base, 'targetRelease': '0.1.2',
                 'nativePlatform': 'linux/' + args.arch, 'anonymousPull': True, 'checks': {}, 'conclusion': 'failed'}
     if os.environ.get('GITHUB_REPOSITORY') and os.environ.get('GITHUB_RUN_ID'):
         evidence['runURL'] = 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID']
