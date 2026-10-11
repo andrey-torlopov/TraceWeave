@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""Anonymous native schema upgrade on fresh, marked synthetic installations."""
+from __future__ import annotations
+import argparse
+import copy
+from dataclasses import replace
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from tools import control, integration
+from tools import published_update_test as previous
+from tools.update_integration import prepare_batch, apply_prepared_and_edit
+require = integration.require
+CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
+          'guided_automatic_backup_migration', 'old_pending_relation_exact_replay',
+          'parallel_four_directions_and_isolated_deletion', 'repeat_bootstrap',
+          'schema_rollback_refused', 'backup_restore_new_volumes', 'marked_cleanup_retains_volumes'}
+
+
+def compatible(base, candidate):
+    previous.published_manifest(candidate, '0.1.2')
+    control.validate_manifest(base)
+    require(base['backendVersion'] == base['frontendVersion'] == '0.1.1', 'Expected previous application pair.')
+    require(len(base['migrations']) == 6 and len(candidate['migrations']) == 7 and
+            candidate['migrations'][:6] == base['migrations'], 'Expected append-only migration 7.')
+    result = copy.deepcopy(candidate)
+    for key in ['gateway', 'tools', 'postgres']:
+        result['images'][key] = base['images'][key]
+    for key in ['delivery', 'deliveryDiffHash']:
+        result['source'][key] = base['source'][key]
+    result['validation'] = 'Published 0.1.2 applications with retained installation infrastructure; native schema-update acceptance required.'
+    control.validate_update(base, result)
+    return result
+
+
+def pull_images(base, selected, arch):
+    directory = Path(os.environ['DOCKER_CONFIG'])
+    require(directory.is_dir() and not directory.is_symlink() and not list(directory.iterdir()), 'Fresh anonymous Docker configuration required.')
+    native = previous.command('docker', 'info', '--format', '{{.Architecture}}')
+    require({'x86_64': 'amd64', 'aarch64': 'arm64'}.get(native, native) == arch, 'Native runner architecture differs.')
+    observed = {}
+    import subprocess
+    for release in [base, selected]:
+        for key, reference in release['images'].items():
+            if reference in observed: continue
+            subprocess.run(['docker', 'pull', reference], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            image = json.loads(previous.command('docker', 'image', 'inspect', reference))[0]
+            require(image['Os'] == 'linux' and image['Architecture'] == arch, 'Pulled image architecture differs.')
+            if key != 'postgres':
+                version = re.search(r':([0-9]+\.[0-9]+\.[0-9]+)@sha256:', reference).group(1)
+                origin = key if key in ['backend', 'frontend'] else 'delivery'
+                repository = 'TraceWeave' + {'backend': 'Backend', 'frontend': 'Frontend'}.get(key, '')
+                expected = {'org.opencontainers.image.version': version, 'org.opencontainers.image.ref.name': 'v' + version,
+                            'org.opencontainers.image.revision': release['source'][origin],
+                            'org.opencontainers.image.source': 'https://github.com/andrey-torlopov/' + repository}
+                require(all((image['Config']['Labels'] or {}).get(label) == value for label, value in expected.items()), 'OCI provenance differs.')
+            observed[reference] = {'imageId': image['Id'], 'platform': 'linux/' + arch}
+    require(not list(directory.iterdir()), 'Anonymous pulls acquired credentials.')
+    return observed
+
+
+def guided_candidate(runtime, directory, git, revision, candidate_path):
+    previous.checked_source(git, directory, revision)
+    require(integration.ROOT == directory and Path.cwd() == directory and shutil.which('python3') is None,
+            'Guided candidate must use the same installation with no host Python.')
+    import subprocess
+    log = runtime / ('integration-guided-schema-' + integration.uid() + '.log')
+    fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as output:
+        result = subprocess.run([str(directory / 'bootstrap.sh'), '--yes', '--release', str(candidate_path)],
+                                cwd=directory, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT)
+    require(result.returncode == 0, 'Guided candidate failed; private diagnostics remain on runner.')
+    return log.read_text()
+
+
+def relation_regression(owner):
+    path = '/api/v1/investigations/' + owner.create('Parallel published relations')['id']
+    graph = owner.json('GET', path + '/graph')
+    type_id = next(item['id'] for item in graph['nodeTypes'] if item['code'] == 'note')
+    source, target = sorted([integration.uid(), integration.uid()])
+    items = []
+    for directed, reverse, both in [(False, False, False), (True, False, False), (True, True, False), (True, False, True), (True, False, True)]:
+        item = {'id': integration.uid(), 'sourceNodeId': target if reverse else source, 'targetNodeId': source if reverse else target,
+                'relationType': 'related_to', 'directed': directed, 'label': 'Published parallel', 'assessment': 'unreviewed', 'noteMarkdown': '', 'confidence': None}
+        if both: item['bidirectional'] = True
+        items.append(item)
+    owner.commands(path, [{'kind': 'node.create', 'node': {'id': node, 'typeId': type_id, 'title': 'Synthetic endpoint'},
+                          'position': {'x': index * 420, 'y': 0}} for index, node in enumerate([source, target])] +
+                         [{'kind': 'relation.create', 'relation': item} for item in items])
+    saved = owner.json('GET', path + '/graph')
+    require(len(saved['relations']) == 5, 'Parallel relations were collapsed.')
+    for item in items:
+        current = owner.json('GET', path + '/relations/' + item['id'])['relation']
+        require(all(current[key] == value for key, value in item.items()) and current['bidirectional'] == item.get('bidirectional', False), 'Direction or identity differs.')
+    owner.commands(path, [{'kind': 'elements.trash', 'nodeIds': [], 'relationIds': [items[-1]['id']], 'groupMode': 'group_only'}])
+    require({item['id'] for item in owner.json('GET', path + '/graph')['relations']} == {item['id'] for item in items[:-1]}, 'Deleting one parallel relation changed another.')
+    integration.node_deletion_smoke(owner)
+
+
+def verify(args, evidence):
+    candidate = previous.published_manifest(previous.strict(Path(args.candidate).read_bytes()), '0.1.2')
+    filename = '0.1.1-update.json' if args.base == 'retained' else '0.1.1.json'
+    base = previous.strict((ROOT / 'releases' / filename).read_bytes())
+    selected = compatible(base, candidate)
+    expected_name = '0.1.2-update.json' if args.base == 'retained' else '0.1.2-update-from-0.1.1.json'
+    checked = selected
+    require(hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest() == candidate['contractHash'], 'Harness contract differs.')
+    git = str(Path(shutil.which('git')).resolve())
+    revision = previous.command(git, '-C', str(ROOT), 'rev-parse', 'HEAD')
+    previous.checked_source(git, ROOT, revision)
+    evidence.update(source={'base': base['source'], 'target': selected['source']}, guidedOperatorRevision=revision)
+    evidence['activeCheck'] = 'anonymous_native_provenance'
+    evidence['images'] = pull_images(base, selected, args.arch)
+    evidence['checks']['anonymous_native_provenance'] = 'passed'
+    runtime, legacy = Path(args.runtime), Path(args.legacy)
+    require(not runtime.exists() and not runtime.is_symlink(), 'Fresh runtime required.')
+    runtime.mkdir(mode=0o700, parents=True)
+    previous.write_json(runtime / 'synthetic-installation.json', {'synthetic': True, 'email': integration.EMAIL})
+    origin = 'http://127.0.0.1:' + str(args.port)
+    operator = None
+    before_config = None
+    try:
+        operator = previous.legacy_operator(legacy, runtime, base, selected)
+        base_path = runtime / 'previous.json'
+        candidate_path = runtime / 'candidate.json'
+        previous.write_json(candidate_path, candidate)
+        previous.write_json(runtime / expected_name, selected)
+        previous.write_json(Path(args.output) / expected_name, selected)
+        previous.write_json(base_path, base)
+        evidence['activeCheck'] = 'published_previous_bootstrap'
+        integration.cli(runtime, 'bootstrap', '--release', str(base_path), '--origin', origin, '--email', integration.EMAIL,
+                        '--name', 'Synthetic schema owner', password=integration.PASSWORD)
+        owner = integration.Client(origin); owner.login()
+        fixture = previous.seed(owner)
+        cookie, csrf, account = owner.cookie, owner.csrf, owner.owner
+        path = fixture[0]
+        prepared = prepare_batch(owner, path, 'schema 0.1.2')
+        body = json.loads(prepared.raw)
+        body['commands'].append({'kind': 'relation.create', 'relation': {'id': integration.uid(), 'sourceNodeId': fixture[1],
+            'targetNodeId': prepared.node_id, 'relationType': 'related_to', 'directed': True, 'label': 'Legacy pending relation',
+            'assessment': 'unreviewed', 'noteMarkdown': '', 'confidence': None}})
+        prepared = replace(prepared, raw=json.dumps(body, ensure_ascii=False, separators=(',', ':')).encode())
+        html = owner.request('GET', '/')[0].decode()
+        entry = re.search(r'src="(/assets/[^" ]+\.js)"', html).group(1)
+        old_asset = owner.request('GET', entry)[0]
+        before_config = operator.load_config(); before = previous.identities(operator, before_config, base)
+        evidence['checks']['published_previous_bootstrap'] = 'passed'
+        evidence['activeCheck'] = 'guided_automatic_backup_migration'
+        previous.command(git, '-C', str(legacy), 'fetch', '--no-tags', '--update-shallow', str(ROOT), revision)
+        previous.checkout_source(git, legacy, revision)
+        output = guided_candidate(runtime, legacy, git, revision, candidate_path)
+        require('схема базы обновится автоматически' in output, 'Bootstrap did not explain automatic migration.')
+        require(operator.current() == checked and operator.load_config() == before_config, 'Bootstrap selected wrong pair or changed configuration.')
+        after = previous.identities(operator, before_config, selected)
+        require(before['db'] == after['db'] and before['gateway'] == after['gateway'], 'Migration restarted retained infrastructure.')
+        require(all(before[key][0] != after[key][0] for key in ['backend', 'frontend']), 'Application containers were not replaced.')
+        previous.preserved(owner, fixture, cookie, csrf, account)
+        require(owner.request('GET', entry)[0] == old_asset, 'Old pending frontend asset disappeared.')
+        state = operator.read_json(runtime / 'operation.json')
+        require(state['phase'] == 'ready' and state.get('backup'), 'No pre-update backup recorded.')
+        backup_name = state['backup']; backup = operator.read_json(runtime / 'backups' / backup_name / 'manifest.json')
+        require(backup['release'] == base and backup['migrations'] == base['migrations'], 'Backup is not the old schema.')
+        require(any(item['sha256'] == hashlib.sha256(fixture[3]).hexdigest() for item in backup['databaseOriginals']), 'Backup omitted original bytes.')
+        operator.compose('run', '--rm', '-T', '--no-deps', 'ops', 'verify-backup', backup_name, config=before_config, release=selected, capture=True)
+        evidence['checks']['guided_automatic_backup_migration'] = 'passed'
+        evidence['activeCheck'] = 'old_pending_relation_exact_replay'
+        apply_prepared_and_edit(owner, path, prepared)
+        require(owner.json('GET', path + '/relations/' + body['commands'][-1]['relation']['id'])['relation']['bidirectional'] is False, 'Legacy pending relation changed direction.')
+        evidence['checks']['old_pending_relation_exact_replay'] = 'passed'
+        evidence['activeCheck'] = 'parallel_four_directions_and_isolated_deletion'
+        relation_regression(owner)
+        evidence['checks']['parallel_four_directions_and_isolated_deletion'] = 'passed'
+        evidence['activeCheck'] = 'repeat_bootstrap'
+        snapshots = {item['id']: owner.json('GET', '/api/v1/investigations/' + item['id'] + '/graph') for item in owner.json('GET', '/api/v1/investigations')['items']}
+        backups = set((runtime / 'backups').iterdir())
+        guided_candidate(runtime, legacy, git, revision, candidate_path)
+        require(previous.identities(operator, before_config, selected) == after and set((runtime / 'backups').iterdir()) == backups, 'Repeated bootstrap reran update.')
+        for identifier, graph in snapshots.items(): require(owner.json('GET', '/api/v1/investigations/' + identifier + '/graph') == graph, 'Repeated bootstrap changed data.')
+        evidence['checks']['repeat_bootstrap'] = 'passed'
+        evidence['activeCheck'] = 'schema_rollback_refused'
+        integration.cli(runtime, 'rollback', '--yes', expect_success=False)
+        require(operator.current() == checked and previous.identities(operator, before_config, selected) == after, 'Refused rollback changed running services.')
+        evidence['checks']['schema_rollback_refused'] = 'passed'
+        evidence['activeCheck'] = 'backup_restore_new_volumes'
+        integration.cli(runtime, 'restore', '--backup', backup_name, '--yes')
+        restored = operator.load_config()
+        require(operator.current() == base and restored['volumes']['database'] != before_config['volumes']['database'] and
+                restored['volumes']['files'] != before_config['volumes']['files'], 'Schema restore did not use new volumes.')
+        previous.preserved(owner, fixture, cookie, csrf, account)
+        require(owner.json('GET', '/release.json')['releaseId'] == '0.1.1', 'Restored frontend differs.')
+        state = operator.read_json(runtime / 'operation.json')
+        require(state['phase'] == 'ready' and state.get('safetyBackup'), 'Restore omitted post-upgrade safety backup.')
+        for volume in before_config['volumes'].values(): previous.command('docker', 'volume', 'inspect', volume)
+        evidence['checks']['backup_restore_new_volumes'] = 'passed'
+    finally:
+        if operator is not None and (runtime / 'installation.json').is_file():
+            require(previous.strict((runtime / 'synthetic-installation.json').read_bytes()) == {'synthetic': True, 'email': integration.EMAIL}, 'Unmarked cleanup refused.')
+            integration.cli(runtime, 'stop')
+            for volume in operator.load_config()['volumes'].values(): previous.command('docker', 'volume', 'inspect', volume)
+            evidence['checks']['marked_cleanup_retains_volumes'] = 'passed'
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--candidate', required=True); parser.add_argument('--legacy', required=True)
+    parser.add_argument('--runtime', required=True); parser.add_argument('--output', required=True)
+    parser.add_argument('--base', choices=['retained', 'full'], required=True)
+    parser.add_argument('--arch', choices=['amd64', 'arm64'], required=True); parser.add_argument('--port', type=int, default=18080)
+    args = parser.parse_args()
+    require(1024 <= args.port <= 65535, 'Unprivileged loopback port required.')
+    for key in ['candidate', 'legacy', 'runtime', 'output']: setattr(args, key, str(Path(getattr(args, key)).absolute()))
+    for key in ['DOCKER_HOST', 'DOCKER_CONTEXT']: os.environ.pop(key, None)
+    output = Path(args.output)
+    require(not output.exists() and not output.is_symlink(), 'Fresh public evidence directory required.')
+    output.mkdir(mode=0o700, parents=True)
+    evidence = {'formatVersion': 1, 'baseRelease': '0.1.1', 'baseInfrastructure': args.base, 'targetRelease': '0.1.2',
+                'nativePlatform': 'linux/' + args.arch, 'anonymousPull': True, 'checks': {}, 'conclusion': 'failed'}
+    if os.environ.get('GITHUB_REPOSITORY') and os.environ.get('GITHUB_RUN_ID'):
+        evidence['runURL'] = 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID']
+    try:
+        verify(args, evidence)
+        require(set(evidence['checks']) == CHECKS and all(value == 'passed' for value in evidence['checks'].values()), 'Incomplete schema acceptance.')
+        evidence['conclusion'] = 'passed'; evidence.pop('activeCheck', None)
+    except Exception as error:
+        evidence['errorClass'] = type(error).__name__
+        trace = error.__traceback__
+        while trace is not None:
+            if Path(trace.tb_frame.f_code.co_filename).resolve() == ROOT / 'tools/schema_update_test.py':
+                evidence['errorLocation'] = {'path': 'tools/schema_update_test.py', 'line': trace.tb_lineno, 'function': trace.tb_frame.f_code.co_name}
+            trace = trace.tb_next
+        print('FAIL schema update: ' + evidence.get('activeCheck', 'preflight') + ' (' + type(error).__name__ + '); private diagnostics remain on runner.', file=sys.stderr)
+    finally: previous.write_json(output / 'verification.json', evidence)
+    print('Published schema update ' + args.base + ' linux/' + args.arch + ': ' + evidence['conclusion'])
+    return 0 if evidence['conclusion'] == 'passed' else 1
+
+if __name__ == '__main__': raise SystemExit(main())

@@ -3,7 +3,7 @@
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "TraceWeave P0 API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Normative E0 contract. JSON-compatible YAML. Unknown fields and duplicate JSON keys are rejected. All domain changes use commands. Technical jobs do not mutate graph data. Definitions and runtime invariants: docs/contract-decisions.md. CR-E8-001: accounts, Docker maintenance and explicit client/account binding."
   },
   "servers": [
@@ -18833,6 +18833,10 @@
           },
           "origin": {
             "$ref": "#/components/schemas/Origin"
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "description": "True for arrows at both ends; requires directed=true. Missing in legacy data means false."
           }
         },
         "required": [
@@ -18871,6 +18875,27 @@
             "deletionBatchId": null,
             "origin": {
               "kind": "manual"
+            }
+          }
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "bidirectional": {
+                  "const": true
+                }
+              },
+              "required": [
+                "bidirectional"
+              ]
+            },
+            "then": {
+              "properties": {
+                "directed": {
+                  "const": true
+                }
+              }
             }
           }
         ]
@@ -18980,6 +19005,10 @@
             "examples": [
               null
             ]
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "description": "True for arrows at both ends; requires directed=true. Missing in legacy data means false."
           }
         },
         "required": [
@@ -19005,6 +19034,27 @@
             "noteMarkdown": "a",
             "assessment": "unreviewed",
             "confidence": null
+          }
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "bidirectional": {
+                  "const": true
+                }
+              },
+              "required": [
+                "bidirectional"
+              ]
+            },
+            "then": {
+              "properties": {
+                "directed": {
+                  "const": true
+                }
+              }
+            }
           }
         ]
       },
@@ -19100,6 +19150,10 @@
             "examples": [
               null
             ]
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "description": "True for arrows at both ends; requires directed=true. Missing in legacy data means false."
           }
         },
         "required": [],
@@ -21297,6 +21351,10 @@
           },
           "hasEvidence": {
             "type": "boolean"
+          },
+          "bidirectional": {
+            "type": "boolean",
+            "description": "True for arrows at both ends; requires directed=true. Missing in legacy data means false."
           }
         },
         "required": [
@@ -21328,6 +21386,27 @@
             "createdAt": "2026-10-08T12:00:00.000Z",
             "updatedAt": "2026-10-08T12:00:00.000Z",
             "hasEvidence": false
+          }
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "bidirectional": {
+                  "const": true
+                }
+              },
+              "required": [
+                "bidirectional"
+              ]
+            },
+            "then": {
+              "properties": {
+                "directed": {
+                  "const": true
+                }
+              }
+            }
           }
         ]
       },

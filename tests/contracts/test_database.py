@@ -67,10 +67,12 @@ class DatabaseContractTests(unittest.TestCase):
     def test_self_relation(self):
         with self.assertRaises(psycopg.IntegrityError):
             with self.connection.transaction():self.relation(target=100)
-    def test_duplicate_active_relation(self):
-        self.relation()
-        with self.assertRaises(psycopg.IntegrityError):
-            with self.connection.transaction():self.relation(i=401)
+    def test_parallel_active_relations(self):
+        self.relation();self.relation(i=401);self.execute('SET CONSTRAINTS ALL IMMEDIATE')
+        self.assertEqual(self.execute('SELECT count(*) FROM relations WHERE deleted_at IS NULL').fetchone()[0],2)
+    def test_bidirectional_requires_directed(self):
+        self.relation(directed=True);self.execute('UPDATE relations SET bidirectional=true');self.execute('SET CONSTRAINTS ALL IMMEDIATE')
+        self.rejected('UPDATE relations SET directed=false')
     def test_different_direction_allowed(self):
         self.relation();self.relation(i=401,directed=True);self.execute('SET CONSTRAINTS ALL IMMEDIATE')
     def test_canonical_undirected_relation(self):

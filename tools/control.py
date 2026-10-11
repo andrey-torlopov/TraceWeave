@@ -306,19 +306,24 @@ def bootstrap_update(old,path):
             new<previous for previous,new in zip(before,after)) or before==after:return None
     try:validate_update(old,target)
     except Failure:
-        selected_path=path.parent/(target['releaseId']+'-update.json')
-        if not selected_path.exists():selected_path=ROOT/'releases'/(target['releaseId']+'-update.json')
-        selected=manifest(selected_path)
-        fields=['formatVersion','releaseId','frontendReleaseId','frontendVersion','backendVersion',
-                'contractHash','backendContractHash','supportedClientContractHashes','migrations','postgresMajor','platforms']
-        if any(selected.get(key)!=target.get(key) for key in fields) or any(
-                selected['images'][key]!=target['images'][key] for key in ['backend','frontend']):
-            raise Failure('Compatible manifest does not match the selected application release.')
-        for key in ['backend','frontend','backendDiffHash','frontendDiffHash']:
-            if selected.get('source',{}).get(key)!=target.get('source',{}).get(key):
-                raise Failure('Compatible manifest does not match the selected application source.')
-        validate_update(old,selected)
-        return selected_path,selected
+        names=[target['releaseId']+'-update.json',target['releaseId']+'-update-from-'+old['releaseId']+'.json']
+        for name in names:
+            selected_path=path.parent/name
+            if not selected_path.exists():selected_path=ROOT/'releases'/name
+            if not selected_path.exists():continue
+            selected=manifest(selected_path)
+            fields=['formatVersion','releaseId','frontendReleaseId','frontendVersion','backendVersion',
+                    'contractHash','backendContractHash','supportedClientContractHashes','migrations','postgresMajor','platforms']
+            if any(selected.get(key)!=target.get(key) for key in fields) or any(
+                    selected['images'][key]!=target['images'][key] for key in ['backend','frontend']):
+                raise Failure('Compatible manifest does not match the selected application release.')
+            for key in ['backend','frontend','backendDiffHash','frontendDiffHash']:
+                if selected.get('source',{}).get(key)!=target.get('source',{}).get(key):
+                    raise Failure('Compatible manifest does not match the selected application source.')
+            try:validate_update(old,selected)
+            except Failure:continue
+            return selected_path,selected
+        raise Failure('No compatible manifest for the installed infrastructure.')
     return path,target
 
 def bootstrap_existing(a,old,state):
@@ -573,10 +578,16 @@ def build_source(a):
         checkouts=[backend,frontend]
         if tagged_delivery:
             source.update(delivery=revision(ROOT),deliveryDiffHash=dirty(ROOT));checkouts.append(ROOT)
-        return source,hash_file(ROOT/'contracts/openapi.yaml'),[git(p,'status','--porcelain=v1','--untracked-files=all') for p in checkouts]
+        compatibility=ROOT/'contracts/client-compatibility.json'
+        return source,hash_file(ROOT/'contracts/openapi.yaml'),[git(p,'status','--porcelain=v1','--untracked-files=all') for p in checkouts],hash_file(compatibility) if compatibility.exists() else None
     before=state()
     if any(before[2]):raise Failure('Source checkouts must be committed and clean, including untracked files; no build started.')
     contract=before[1];tools_image='traceweave/tools:'+rid
+    compatibility=ROOT/'contracts/client-compatibility.json'
+    previous_contracts=read_json(compatibility) if compatibility.exists() else []
+    if not isinstance(previous_contracts,list) or any(not isinstance(v,str) or not re.fullmatch('[a-f0-9]{64}',v) for v in previous_contracts):
+        raise Failure('Invalid reviewed client compatibility metadata; no build started.')
+    supported_contracts=list(dict.fromkeys([contract,*previous_contracts]))
     def labels(component):
         name=component if component in ['backend','frontend'] else 'delivery'
         repository='TraceWeave'+({'backend':'Backend','frontend':'Frontend'}.get(component,''))
@@ -596,7 +607,7 @@ def build_source(a):
         migrations.append({'version':int(p.name[:4]),'sha256':hash_file(p)})
     if state()!=before:raise Failure('Source or contract changed during build; no release manifest written. Retry with a new ID from stable checkouts.')
     architecture=execute(['docker','info','--format','{{.Architecture}}'],capture=True)
-    value={'formatVersion':1,'releaseId':rid,'frontendReleaseId':frontend_release,'frontendVersion':versions['frontend'],'backendVersion':versions['backend'],'backendContractHash':contract,'images':images,'postgresMajor':18,'contractHash':contract,'supportedClientContractHashes':[contract],'migrations':migrations,'platforms':['linux/'+('arm64' if architecture in ['arm64','aarch64'] else 'amd64')],'source':before[0],'validation':'built; run integration before publication','rollback':'same migration history only; otherwise restore verified backup'}
+    value={'formatVersion':1,'releaseId':rid,'frontendReleaseId':frontend_release,'frontendVersion':versions['frontend'],'backendVersion':versions['backend'],'backendContractHash':contract,'images':images,'postgresMajor':18,'contractHash':contract,'supportedClientContractHashes':supported_contracts,'migrations':migrations,'platforms':['linux/'+('arm64' if architecture in ['arm64','aarch64'] else 'amd64')],'source':before[0],'validation':'built; run integration before publication','rollback':'same migration history only; otherwise restore verified backup'}
     write_json(path,value,0o644);print('Local immutable release: '+str(path))
 
 def parser():

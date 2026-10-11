@@ -194,7 +194,11 @@ class ArchiveTests(unittest.TestCase):
     def test_missing_type(self):self.project['nodes'][0]['typeId']=uid(100);self.reject_project()
     def test_missing_layout(self):self.project['layouts'].pop();self.reject_project()
     def test_self_relation(self):self.project['relations'][0]['targetNodeId']=uid(10);self.reject_project()
-    def test_duplicate_relation(self):r=copy.deepcopy(self.project['relations'][0]);r['id']=uid(21);self.project['relations'].append(r);self.reject_project()
+    def test_parallel_relations_allowed(self):
+        r=copy.deepcopy(self.project['relations'][0]);r['id']=uid(21);self.project['relations'].append(r);validate_project(self.project)
+    def test_bidirectional_relation(self):
+        r=self.project['relations'][0];r['directed']=True;r['bidirectional']=True;validate_project(self.project)
+        r['directed']=False;self.reject_project()
     def test_uncanonical_undirected(self):r=self.project['relations'][0];r['sourceNodeId'],r['targetNodeId']=r['targetNodeId'],r['sourceNodeId'];self.reject_project()
     def test_nested_group(self):self.project['memberships'][0]['memberNodeId']=uid(12);self.reject_project()
     def test_two_group_memberships(self):self.project['memberships'].append(copy.deepcopy(self.project['memberships'][0]));self.reject_project()

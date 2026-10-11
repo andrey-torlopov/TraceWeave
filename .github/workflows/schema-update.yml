@@ -1,0 +1,108 @@
+name: Published schema upgrade and recovery
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_json:
+        description: Complete 0.1.2 candidate.json from successful full publication
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: published-update-${{ github.repository }}-0.1.2
+  cancel-in-progress: false
+defaults:
+  run:
+    shell: bash
+jobs:
+  published-update:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: retained
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: retained
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: full
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: full
+            legacy_tag: v0.1.1
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      TW_CANDIDATE_INPUT: ${{ inputs.candidate_json }}
+      TW_VALIDATE_HTTP_CONTRACT: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: andrey-torlopov/TraceWeave
+          ref: refs/tags/${{ matrix.legacy_tag }}
+          path: legacy
+          persist-credentials: false
+      - name: Prepare isolated inputs and current HTTP harness
+        working-directory: harness
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/schema-update-anonymous-${{ matrix.arch }}-${{ matrix.base }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib
+          raw = os.environ['TW_CANDIDATE_INPUT'].encode('utf-8')
+          assert len(raw) <= 60000, 'Candidate exceeds verification bound.'
+          credentials = pathlib.Path(os.environ['DOCKER_CONFIG'])
+          assert not credentials.exists(), 'Anonymous Docker credential directory must be new.'
+          credentials.mkdir(mode=0o700)
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write('DOCKER_CONFIG=' + str(credentials) + '\n')
+          candidate = pathlib.Path(os.environ['RUNNER_TEMP']) / 'published-update-candidate.json'
+          with candidate.open('xb') as out:
+              os.chmod(candidate, 0o600)
+              out.write(raw)
+          PY
+          python3 -m venv "$RUNNER_TEMP/published-update-venv"
+          "$RUNNER_TEMP/published-update-venv/bin/pip" install -r tools/requirements-validation.txt
+          "$RUNNER_TEMP/published-update-venv/bin/python" -B -m unittest discover -s tests -p test_schema_update.py
+      - name: Real anonymous native guided migration, old-client replay and backup recovery
+        working-directory: harness
+        run: |
+          "$RUNNER_TEMP/published-update-venv/bin/python" -B tools/schema_update_test.py \
+            --candidate "$RUNNER_TEMP/published-update-candidate.json" \
+            --legacy "$GITHUB_WORKSPACE/legacy" \
+            --runtime "$RUNNER_TEMP/published-update-runtime" \
+            --output "$RUNNER_TEMP/published-update-evidence" \
+            --arch '${{ matrix.arch }}' --base '${{ matrix.base }}' --port 18080
+      - name: Summarize public verification outcomes
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          evidence = pathlib.Path(os.environ['RUNNER_TEMP']) / 'published-update-evidence/verification.json'
+          if evidence.is_file():
+              value = json.loads(evidence.read_text())
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+                  out.write(value['nativePlatform'] + ': ' + value['conclusion'] + '\n\n')
+                  for key, result in value['checks'].items():
+                      out.write('- ' + key + ': ' + result + '\n')
+                  out.write('\nOnly the compatible manifest and compact evidence are uploaded. Private runtime, credentials and logs remain on this runner.\n')
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: schema-update-${{ matrix.arch }}-${{ matrix.base }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/published-update-evidence/verification.json
+            ${{ runner.temp }}/published-update-evidence/0.1.2-update*.json
+          retention-days: 90
+          if-no-files-found: error

@@ -2448,6 +2448,10 @@
         },
         "origin": {
           "$ref": "#/$defs/Origin"
+        },
+        "bidirectional": {
+          "type": "boolean",
+          "description": "True for arrows at both ends; requires directed=true. Missing in legacy data means false."
         }
       },
       "required": [
@@ -2467,7 +2471,28 @@
         "deletionBatchId",
         "origin"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "bidirectional": {
+                "const": true
+              }
+            },
+            "required": [
+              "bidirectional"
+            ]
+          },
+          "then": {
+            "properties": {
+              "directed": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
     },
     "RelationType": {
       "type": "object",

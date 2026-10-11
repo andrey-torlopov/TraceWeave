@@ -175,6 +175,19 @@ class ControlTests(unittest.TestCase):
         self.assertIn("миграции не нужны", dependencies["output"].getvalue())
         dependencies["account"].assert_not_called(); dependencies["compose"].assert_not_called()
 
+    def test_guided_bootstrap_selects_reviewed_variant_for_installed_infrastructure(self):
+        path, compatible, target, selected = self.guided_fixture(full=True)
+        wrong = copy.deepcopy(selected)
+        wrong["images"]["gateway"] = "sha256:" + "7" * 64
+        control.write_json(compatible, wrong)
+        variant = path.parent / "0.1.1-update-from-0.1.0.json"
+        control.write_json(variant, selected)
+        with self.guided_dependencies() as dependencies:
+            control.bootstrap(control.parser().parse_args(["bootstrap", "--release", str(path), "--yes"]))
+        self.assertEqual(control.current(), selected)
+        self.assertEqual(dependencies["sequence"], ["update"])
+        self.assertIn("Доступно обновление:", dependencies["output"].getvalue())
+
     def test_guided_bootstrap_explicit_compatible_manifest_uses_reviewed_path(self):
         path, compatible, target, selected = self.guided_fixture(full=True)
         with self.guided_dependencies() as dependencies:
@@ -944,6 +957,28 @@ class ControlTests(unittest.TestCase):
         self.assertEqual(release["platforms"], ["linux/arm64"])
         self.assertEqual(release["source"]["backend"], fixture.revisions[str(fixture.backend)])
         self.assertEqual(release["migrations"], [{"version": 1, "sha256": control.hash_file(fixture.backend / "Sources" / "ResearchGraphInfrastructure" / "Resources" / "0001.sql")}])
+
+    def test_source_build_records_reviewed_old_client_compatibility(self):
+        fixture = self.source_build_fixture()
+        reviewed = fixture.root / "contracts" / "client-compatibility.json"
+        reviewed.write_text(json.dumps(["d" * 64, "d" * 64]))
+        with patch.object(control, "ROOT", fixture.root), patch.object(control, "execute", side_effect=fixture.command), contextlib.redirect_stdout(io.StringIO()):
+            control.build_source(fixture.arguments)
+        release = control.manifest(fixture.root / "releases" / "synthetic-built.local.json")
+        self.assertEqual(release["supportedClientContractHashes"], [release["contractHash"], "d" * 64])
+
+    def test_source_build_rejects_invalid_or_drifting_client_compatibility(self):
+        for index, value in enumerate([{}, ["invalid"], [42], ["d" * 64]]):
+            fixture = self.source_build_fixture("compatibility-" + str(index))
+            reviewed = fixture.root / "contracts" / "client-compatibility.json"
+            reviewed.write_text(json.dumps(value))
+            if index == 3:
+                fixture.after_frontend_build = lambda: reviewed.write_text(json.dumps(["e" * 64]))
+            with patch.object(control, "ROOT", fixture.root), patch.object(control, "execute", side_effect=fixture.command):
+                with self.assertRaisesRegex(control.Failure, "changed during build" if index == 3 else "Invalid reviewed"):
+                    control.build_source(fixture.arguments)
+            self.assertFalse((fixture.root / "releases" / "synthetic-built.local.json").exists())
+            if index != 3: self.assertFalse(any(command[0] == "docker" for command in fixture.commands))
 
     def test_source_build_rejects_reused_release_identifier_before_external_commands(self):
         fixture = self.source_build_fixture()

@@ -245,12 +245,13 @@ def validate_project(project: dict):
         gt = lookup('nodeTypes', group['typeId']); mt = lookup('nodeTypes', member['typeId'])
         if gt['code'] != 'group' or not gt['isSystem'] or mt['code'] == 'group' or group['deletedAt'] or member['deletedAt']:
             raise ValueError('invalid group membership')
-    relation_keys = []
     codes = {r['code'] for r in project['relationTypes']}
     for relation in project['relations']:
         source = lookup('nodes', relation['sourceNodeId']); target = lookup('nodes', relation['targetNodeId'])
         if source['id'] == target['id'] or relation['relationType'] not in codes:
             raise ValueError('invalid relation endpoints/type')
+        if relation.get('bidirectional', False) and not relation['directed']:
+            raise ValueError('bidirectional relation must be directed')
         if not relation['directed'] and source['id'] >= target['id']:
             raise ValueError('uncanonical undirected relation')
         if (relation['deletedAt'] is None) != (relation['deletionBatchId'] is None):
@@ -258,10 +259,8 @@ def validate_project(project: dict):
         if relation['deletedAt'] is None:
             if source['deletedAt'] or target['deletedAt']:
                 raise ValueError('active relation with deleted endpoint')
-            relation_keys.append((source['id'], target['id'], relation['relationType'], relation['directed']))
         else:
             lookup('deletionBatches', relation['deletionBatchId'])
-    unique(relation_keys, 'duplicate active relation')
     attr_keys = []
     for attribute in project['attributes']:
         lookup('nodes', attribute['nodeId'])
