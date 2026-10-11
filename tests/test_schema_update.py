@@ -2,6 +2,7 @@ import copy
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import Mock, patch
 from tools import control, schema_update_test
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,3 +36,27 @@ class SchemaUpdateTests(unittest.TestCase):
             else: value["backendVersion"] = "0.1.4"
             with self.subTest(kind=kind), self.assertRaises((AssertionError, control.Failure)):
                 schema_update_test.compatible(base, value)
+
+    def test_restore_reauthenticates_before_reading_the_preserved_fixture(self):
+        owner = Mock(cookie='original-session', csrf='original-csrf', owner='original-account')
+        owner.json.return_value = {'authenticated': False, 'user': None}
+        def login():
+            owner.cookie = 'fresh-session'
+            owner.csrf = 'fresh-csrf'
+        owner.login.side_effect = login
+        fixture = object()
+        with patch.object(schema_update_test.previous, 'preserved') as preserved:
+            schema_update_test.preserved_after_restore(owner, fixture, 'original-account')
+            preserved.assert_called_once_with(owner, fixture, 'fresh-session', 'fresh-csrf', 'original-account')
+        owner.json.assert_called_once_with('GET', '/api/v1/session')
+        owner.login.assert_called_once_with()
+
+    def test_restore_refuses_live_old_sessions_and_changed_accounts(self):
+        for authenticated, restored_account in [(True, 'original-account'), (False, 'another-account')]:
+            owner = Mock(cookie='session', csrf='csrf', owner=restored_account)
+            owner.json.return_value = {'authenticated': authenticated, 'user': {'id': 'original-account'} if authenticated else None}
+            with self.subTest(authenticated=authenticated), patch.object(schema_update_test.previous, 'preserved') as preserved:
+                with self.assertRaises(AssertionError):
+                    schema_update_test.preserved_after_restore(owner, object(), 'original-account')
+                preserved.assert_not_called()
+                if authenticated: owner.login.assert_not_called()

@@ -104,6 +104,15 @@ def relation_regression(owner):
     integration.node_deletion_smoke(owner)
 
 
+def preserved_after_restore(owner, fixture, account):
+    # Specification 21.4 requires restored backups to revoke every old session.
+    session = owner.json('GET', '/api/v1/session')
+    require(session['authenticated'] is False and session['user'] is None, 'Restore did not revoke the old session.')
+    owner.login()
+    require(owner.owner == account, 'Restore changed the original account identity.')
+    previous.preserved(owner, fixture, owner.cookie, owner.csrf, account)
+
+
 def verify(args, evidence):
     candidate = previous.published_manifest(previous.strict(Path(args.candidate).read_bytes()), '0.1.3')
     filename = {'original': '0.1.0.json', 'retained': '0.1.1-update.json', 'full': '0.1.1.json'}[args.base]
@@ -193,7 +202,7 @@ def verify(args, evidence):
         restored = operator.load_config()
         require(operator.current() == base and restored['volumes']['database'] != before_config['volumes']['database'] and
                 restored['volumes']['files'] != before_config['volumes']['files'], 'Schema restore did not use new volumes.')
-        previous.preserved(owner, fixture, cookie, csrf, account)
+        preserved_after_restore(owner, fixture, account)
         require(owner.json('GET', '/release.json')['releaseId'] == base['releaseId'], 'Restored frontend differs.')
         state = operator.read_json(runtime / 'operation.json')
         require(state['phase'] == 'ready' and state.get('safetyBackup'), 'Restore omitted post-upgrade safety backup.')
