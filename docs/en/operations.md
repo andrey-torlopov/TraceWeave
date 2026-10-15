@@ -46,7 +46,7 @@ Keep the updated delivery scripts and release catalog when restoring an older ba
 
 In 0.1.6, interrupted upload/export/import jobs remain readable after restore, including older stored error records. An old export reports that its ZIP is unavailable and must be recreated. This fixes the restore defect that prevented promotion of 0.1.5.
 
-Ready-made export ZIPs are temporary and are not part of backup. After restore, previous export jobs are unavailable; create fresh raw-data or readable-report ZIPs from the restored investigation. An update from 0.1.7/0.1.8 to 0.1.9 keeps schema 10, so image rollback to the recorded previous 0.1.7/0.1.8 selection is supported with the same runtime. After upgrading to schema 10 in 0.1.7, image-only rollback to schema 9 or earlier is refused. Use a compatible fixing release or restore the verified pre-update backup into new volumes.
+Ready-made export ZIPs are temporary and are not part of backup. After restore, previous export jobs are unavailable; create fresh ZIPs from the restored investigation. Release 0.2.0 uses schema 11 and matching backup tools. Image-only rollback to 0.1.9 or an earlier schema is refused. Use a compatible fixing release or restore the verified pre-update backup into new volumes.
 
 ## Interrupted Operations
 

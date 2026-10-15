@@ -1,0 +1,46 @@
+{
+  "amd64": {
+    "backend": {
+      "testedImageId": "sha256:f18cc29a3d4f8d3ef94486dca783b119994fa52ca76bb751eae523d4882f8d97",
+      "anonymousPulledImageId": "sha256:f18cc29a3d4f8d3ef94486dca783b119994fa52ca76bb751eae523d4882f8d97",
+      "equal": true
+    },
+    "frontend": {
+      "testedImageId": "sha256:e2c3cc01e1d1a8eaceb2fd3ebc03a8a6b93662c2f0aa51202b2c9c2fd5771b49",
+      "anonymousPulledImageId": "sha256:e2c3cc01e1d1a8eaceb2fd3ebc03a8a6b93662c2f0aa51202b2c9c2fd5771b49",
+      "equal": true
+    },
+    "gateway": {
+      "testedImageId": "sha256:aa1fee432c2d434c03e7a46b7256f17b8562109303b575522619de019b78a760",
+      "anonymousPulledImageId": "sha256:aa1fee432c2d434c03e7a46b7256f17b8562109303b575522619de019b78a760",
+      "equal": true
+    },
+    "tools": {
+      "testedImageId": "sha256:9f44ebf7a762ba60e98f0b872a968da42503897df0f9b3fc7eef517727d1253e",
+      "anonymousPulledImageId": "sha256:9f44ebf7a762ba60e98f0b872a968da42503897df0f9b3fc7eef517727d1253e",
+      "equal": true
+    }
+  },
+  "arm64": {
+    "backend": {
+      "testedImageId": "sha256:a5ba3672086a3da0fdfc3547d4c03660c4de2ca3661bbec0c47d28b70efa11db",
+      "anonymousPulledImageId": "sha256:a5ba3672086a3da0fdfc3547d4c03660c4de2ca3661bbec0c47d28b70efa11db",
+      "equal": true
+    },
+    "frontend": {
+      "testedImageId": "sha256:a6757dadc0c8b6e263bf25ac7c0bfe50decba73528a107e93a5c774f18a27482",
+      "anonymousPulledImageId": "sha256:a6757dadc0c8b6e263bf25ac7c0bfe50decba73528a107e93a5c774f18a27482",
+      "equal": true
+    },
+    "gateway": {
+      "testedImageId": "sha256:fa167f407c326bcdf926f402d5c7e4773f1f4a82c2362eebad0477e88e0f12fb",
+      "anonymousPulledImageId": "sha256:fa167f407c326bcdf926f402d5c7e4773f1f4a82c2362eebad0477e88e0f12fb",
+      "equal": true
+    },
+    "tools": {
+      "testedImageId": "sha256:9da8d2afdcd0f6ff86cbe3765f0df339f27dc53bad27b205da6ab32433723b0a",
+      "anonymousPulledImageId": "sha256:9da8d2afdcd0f6ff86cbe3765f0df339f27dc53bad27b205da6ab32433723b0a",
+      "equal": true
+    }
+  }
+}

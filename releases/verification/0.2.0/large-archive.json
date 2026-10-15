@@ -1,0 +1,18 @@
+{
+  "test": "LargeProjectArchiveTests.testWriterReaderBeyondFourGiBWithMaximumSizeOriginals",
+  "result": "passed",
+  "platform": "macOS arm64",
+  "backendSource": "fbfc4d76f85ea0371ad2c06b647b6ea381202498",
+  "archiveBytes": 4831854009,
+  "originalCount": 9,
+  "bytesPerOriginal": 536870912,
+  "bufferBytes": 65536,
+  "checks": [
+    "actual ZIP exceeds UInt32.max",
+    "production writer and reader",
+    "all original byte sizes and SHA-256 match",
+    "project and presentation match"
+  ],
+  "peakRSS": "not_measured",
+  "command": "RG_RUN_LARGE_ARCHIVE_TESTS=1 swift test --filter LargeProjectArchiveTests"
+}

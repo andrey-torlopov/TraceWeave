@@ -1,0 +1,15 @@
+{
+  "result": "passed",
+  "platform": "macOS arm64 Chromium",
+  "frontendTestRevision": "f51cf9d1a967adf96e759855b5cd3dcc6b5df8ae",
+  "accountGuard": true,
+  "missingAccountHeaderStatus": 409,
+  "validAccountContractStatus": 200,
+  "suites": {
+    "tests/playwright.e2.config.ts": 10,
+    "tests/playwright.e3.config.ts": 33,
+    "tests/playwright.e4.config.ts": 11
+  },
+  "syntheticRuntime": "/private/tmp/traceweave-release-0.2.0/guarded-browser-data",
+  "productionRuntimeChanged": false
+}
