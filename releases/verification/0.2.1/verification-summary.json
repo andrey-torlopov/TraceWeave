@@ -1,0 +1,52 @@
+{
+  "releaseId": "0.2.1",
+  "conclusion": "passed",
+  "source": {
+    "backend": "60364932e8ccdde8e083e40e5edc2018720da8ef",
+    "frontend": "38da2d8d6bf55c2034565d103549b1d9768691b7",
+    "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "delivery": "2b44b11827d6d5023cd11038c91ada7fc5e41ec0",
+    "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "images": {
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.1@sha256:aa0679560ff52a483df8d94056b4024217717436f4718fab247647ef0e53d4c6",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.1@sha256:5071c8e485d314bc781917f8cf3098d566303d7c9f1549bd96103cfd9a26308d",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.1@sha256:590acfe8719c2bcb31ced642281755ecffd1a1473d70d8bb32faf27d418e81a8",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.2.1@sha256:b443c0498a05f7560bcd7d1ae462397c704413d31307101ddf9d49e602f6a5f2",
+    "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
+  },
+  "nativePlatforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "migration": 11,
+  "api": "1.4.0",
+  "sourceRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38782336677",
+  "publicationRun": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38786046525",
+  "registryRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38793437343",
+  "applicationUpdateRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38793449790",
+  "browserTestRevision": "38da2d8d6bf55c2034565d103549b1d9768691b7",
+  "chromiumScenarios": {
+    "editorAndTransfer": 10,
+    "graph": 35,
+    "attachments": 12
+  },
+  "publishedInstallationVariants": 90,
+  "nativeUpdateCases": 180,
+  "updateManifestVariants": 36,
+  "rollback": "Same-schema image rollback to 0.2.0; older schemas require verified backup restore into new volumes.",
+  "notRun": [
+    "real Safari",
+    "Firefox",
+    "full load/performance matrix",
+    "complete P0 acceptance"
+  ],
+  "priorPublicationAttempt": {
+    "attempt": 1,
+    "conclusion": "failure",
+    "failure": "Non-JSON response in graceful_upload before HTTP-status assertion; exact response not retained",
+    "sourceUnchangedOnRetry": true,
+    "note": "The failed attempt is not acceptance evidence; required gates remained unchanged."
+  }
+}

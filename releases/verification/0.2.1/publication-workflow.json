@@ -1,0 +1,580 @@
+{
+  "conclusion": "success",
+  "headSha": "60364932e8ccdde8e083e40e5edc2018720da8ef",
+  "jobs": [
+    {
+      "completedAt": "2026-10-15T19:20:32Z",
+      "conclusion": "success",
+      "databaseId": 116608293724,
+      "name": "validate (arm64, ubuntu-24.04-arm)",
+      "startedAt": "2026-10-15T18:50:52Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-15T18:50:57Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-15T18:50:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:50:59Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-15T18:50:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:51:00Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 3,
+          "startedAt": "2026-10-15T18:50:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:51:02Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 4,
+          "startedAt": "2026-10-15T18:51:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:51:03Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 5,
+          "startedAt": "2026-10-15T18:51:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:51:03Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v7",
+          "number": 6,
+          "startedAt": "2026-10-15T18:51:03Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:51:32Z",
+          "conclusion": "success",
+          "name": "Check contract, operator tests and frontend",
+          "number": 7,
+          "startedAt": "2026-10-15T18:51:03Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:03:35Z",
+          "conclusion": "success",
+          "name": "Build the immutable candidate with baked versions and contract context",
+          "number": 8,
+          "startedAt": "2026-10-15T18:51:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:06:58Z",
+          "conclusion": "success",
+          "name": "Real API, media, export, restart, maintenance and restore",
+          "number": 9,
+          "startedAt": "2026-10-15T19:03:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:06:58Z",
+          "conclusion": "skipped",
+          "name": "Real Chromium graph scaling and attachments against the built candidate",
+          "number": 10,
+          "startedAt": "2026-10-15T19:06:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:06:58Z",
+          "conclusion": "success",
+          "name": "Stop only the marked synthetic installation",
+          "number": 11,
+          "startedAt": "2026-10-15T19:06:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:06:59Z",
+          "conclusion": "success",
+          "name": "Export the exact tested images",
+          "number": 12,
+          "startedAt": "2026-10-15T19:06:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:29Z",
+          "conclusion": "success",
+          "name": "Confirm both native validations before publishing",
+          "number": 13,
+          "startedAt": "2026-10-15T19:06:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:35Z",
+          "conclusion": "success",
+          "name": "Run docker/setup-buildx-action@v4",
+          "number": 14,
+          "startedAt": "2026-10-15T19:19:29Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:35Z",
+          "conclusion": "success",
+          "name": "Run docker/login-action@v4",
+          "number": 15,
+          "startedAt": "2026-10-15T19:19:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:27Z",
+          "conclusion": "success",
+          "name": "Push the exact tested native images and emit bounded metadata",
+          "number": 16,
+          "startedAt": "2026-10-15T19:19:35Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:27Z",
+          "conclusion": "success",
+          "name": "Post Run docker/login-action@v4",
+          "number": 26,
+          "startedAt": "2026-10-15T19:20:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:28Z",
+          "conclusion": "success",
+          "name": "Post Run docker/setup-buildx-action@v4",
+          "number": 27,
+          "startedAt": "2026-10-15T19:20:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:28Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v7",
+          "number": 28,
+          "startedAt": "2026-10-15T19:20:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:28Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 29,
+          "startedAt": "2026-10-15T19:20:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:28Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 30,
+          "startedAt": "2026-10-15T19:20:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:29Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 31,
+          "startedAt": "2026-10-15T19:20:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:29Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 32,
+          "startedAt": "2026-10-15T19:20:29Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:29Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 33,
+          "startedAt": "2026-10-15T19:20:29Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38786046525/job/116608293724"
+    },
+    {
+      "completedAt": "2026-10-15T19:20:36Z",
+      "conclusion": "success",
+      "databaseId": 116608294330,
+      "name": "validate (amd64, ubuntu-24.04)",
+      "startedAt": "2026-10-15T18:50:50Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-15T18:50:52Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-15T18:50:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:50:53Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-15T18:50:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:50:54Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 3,
+          "startedAt": "2026-10-15T18:50:53Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:50:55Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 4,
+          "startedAt": "2026-10-15T18:50:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:50:56Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 5,
+          "startedAt": "2026-10-15T18:50:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:50:59Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v7",
+          "number": 6,
+          "startedAt": "2026-10-15T18:50:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:51:37Z",
+          "conclusion": "success",
+          "name": "Check contract, operator tests and frontend",
+          "number": 7,
+          "startedAt": "2026-10-15T18:50:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:10:50Z",
+          "conclusion": "success",
+          "name": "Build the immutable candidate with baked versions and contract context",
+          "number": 8,
+          "startedAt": "2026-10-15T18:51:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:14:31Z",
+          "conclusion": "success",
+          "name": "Real API, media, export, restart, maintenance and restore",
+          "number": 9,
+          "startedAt": "2026-10-15T19:10:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:19Z",
+          "conclusion": "success",
+          "name": "Real Chromium graph scaling and attachments against the built candidate",
+          "number": 10,
+          "startedAt": "2026-10-15T19:14:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:20Z",
+          "conclusion": "success",
+          "name": "Stop only the marked synthetic installation",
+          "number": 11,
+          "startedAt": "2026-10-15T19:19:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:21Z",
+          "conclusion": "success",
+          "name": "Export the exact tested images",
+          "number": 12,
+          "startedAt": "2026-10-15T19:19:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:37Z",
+          "conclusion": "success",
+          "name": "Confirm both native validations before publishing",
+          "number": 13,
+          "startedAt": "2026-10-15T19:19:21Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:42Z",
+          "conclusion": "success",
+          "name": "Run docker/setup-buildx-action@v4",
+          "number": 14,
+          "startedAt": "2026-10-15T19:19:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:19:42Z",
+          "conclusion": "success",
+          "name": "Run docker/login-action@v4",
+          "number": 15,
+          "startedAt": "2026-10-15T19:19:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:32Z",
+          "conclusion": "success",
+          "name": "Push the exact tested native images and emit bounded metadata",
+          "number": 16,
+          "startedAt": "2026-10-15T19:19:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:33Z",
+          "conclusion": "success",
+          "name": "Post Run docker/login-action@v4",
+          "number": 26,
+          "startedAt": "2026-10-15T19:20:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:33Z",
+          "conclusion": "success",
+          "name": "Post Run docker/setup-buildx-action@v4",
+          "number": 27,
+          "startedAt": "2026-10-15T19:20:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:34Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v7",
+          "number": 28,
+          "startedAt": "2026-10-15T19:20:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:34Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 29,
+          "startedAt": "2026-10-15T19:20:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:34Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 30,
+          "startedAt": "2026-10-15T19:20:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:34Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 31,
+          "startedAt": "2026-10-15T19:20:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:35Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 32,
+          "startedAt": "2026-10-15T19:20:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:35Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 33,
+          "startedAt": "2026-10-15T19:20:35Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38786046525/job/116608294330"
+    },
+    {
+      "completedAt": "2026-10-15T18:29:46Z",
+      "conclusion": "success",
+      "databaseId": 116608296356,
+      "name": "prepare",
+      "startedAt": "2026-10-15T18:29:35Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-15T18:29:37Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-15T18:29:36Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:38Z",
+          "conclusion": "success",
+          "name": "Select explicit GitHub release tags",
+          "number": 2,
+          "startedAt": "2026-10-15T18:29:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:40Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 3,
+          "startedAt": "2026-10-15T18:29:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:41Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 4,
+          "startedAt": "2026-10-15T18:29:40Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:42Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 5,
+          "startedAt": "2026-10-15T18:29:41Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:42Z",
+          "conclusion": "success",
+          "name": "Resolve each tag once and record provenance",
+          "number": 6,
+          "startedAt": "2026-10-15T18:29:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:43Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 10,
+          "startedAt": "2026-10-15T18:29:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:43Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 11,
+          "startedAt": "2026-10-15T18:29:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:43Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 12,
+          "startedAt": "2026-10-15T18:29:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:29:43Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 13,
+          "startedAt": "2026-10-15T18:29:43Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38786046525/job/116608296356"
+    },
+    {
+      "completedAt": "2026-10-15T19:21:04Z",
+      "conclusion": "success",
+      "databaseId": 116622469620,
+      "name": "publish-index",
+      "startedAt": "2026-10-15T19:20:41Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-15T19:20:43Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-15T19:20:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:49Z",
+          "conclusion": "success",
+          "name": "Run docker/setup-buildx-action@v4",
+          "number": 2,
+          "startedAt": "2026-10-15T19:20:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:20:50Z",
+          "conclusion": "success",
+          "name": "Run docker/login-action@v4",
+          "number": 3,
+          "startedAt": "2026-10-15T19:20:49Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:21:01Z",
+          "conclusion": "success",
+          "name": "Publish indexes by digest and write the release evidence",
+          "number": 4,
+          "startedAt": "2026-10-15T19:20:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:21:01Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@v7",
+          "number": 5,
+          "startedAt": "2026-10-15T19:21:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:21:02Z",
+          "conclusion": "success",
+          "name": "Post Run docker/login-action@v4",
+          "number": 9,
+          "startedAt": "2026-10-15T19:21:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:21:02Z",
+          "conclusion": "success",
+          "name": "Post Run docker/setup-buildx-action@v4",
+          "number": 10,
+          "startedAt": "2026-10-15T19:21:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T19:21:02Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 11,
+          "startedAt": "2026-10-15T19:21:02Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38786046525/job/116622469620"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38786046525"
+}
