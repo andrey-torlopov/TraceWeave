@@ -404,6 +404,8 @@ def project_portability_smoke(owner, second, fixture):
     path = fixture['path']; node = fixture['node']
     owner.commands(path, [{'kind': 'node.update', 'nodeId': node, 'changes': {'iconEmoji': '👩🏽‍🔬'}}])
     before = owner.json('GET', path + '/graph')
+    source_document = owner.json('GET', path + '/nodes/' + node)
+    source_originals = sorted(owner.request('GET', path + '/assets/' + asset['id'] + '/content', native=True)[0] for asset in source_document['assets'])
     ui = dict(formatVersion=1, viewport=dict(x=-123, y=222, zoom=0.75), inspector=node,
               details=False, outline=True, cardShrinkFactor=4, iconSizeFactor=3)
     job = owner.json('POST', path + '/exports', dict(kind='project_archive', idempotencyKey=uid(), sourceRevision=before['revision'], presentation=ui), expected=202)
@@ -448,7 +450,7 @@ def project_portability_smoke(owner, second, fixture):
     require(seed['viewport'] == ui['viewport'] and seed['inspector'] == copied_node['id'], 'Imported server presentation seed differs.')
     document = second.json('GET', copied + '/nodes/' + copied_node['id'])
     require(document['node']['bodyMarkdown'] == fixture['body'], 'Imported document text differs.')
-    expected = sorted(fixture['originals'].values())
+    expected = source_originals
     actual = sorted(second.request('GET', copied + '/assets/' + asset['id'] + '/content', native=True)[0] for asset in document['assets'])
     require(actual == expected, 'Imported material/original bytes differ.')
     owner.request('GET', copied, expected=404)
