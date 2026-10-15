@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 — 2026-10-15
+
+- Deliver complete project ZIP transfer and a per-document emoji/type icon picker as one coordinated release.
+- Freeze archive format 2.0, both historical 1.0 schema profiles and the shared Emoji 17.0 corpus; advance OpenAPI to 1.4.0.
+- Append migration 11 and coordinate backup tools with schema upgrades while retaining the installed database, gateway and data volumes.
+- Refuse image-only rollback across schema changes and preserve verified backup recovery into new volumes.
+
 ## 0.1.9 — 2026-10-11
 
 - Deliver configurable card-to-icon thresholds and icon diameter with centered graph geometry.

@@ -577,7 +577,20 @@ jobs:
                       out.write('- ' + key + ': ' + result + '\n')
                   out.write('\nOnly the compatible manifest and compact evidence are uploaded. Private runtime, credentials and logs remain on this runner.\n')
           PY
+      - name: Retain public evidence in the run log
+        if: always()
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, pathlib
+          directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'published-update-evidence'
+          for path in sorted(directory.glob('*.json')):
+              if path.name != 'verification.json' and not path.name.startswith('0.2.0-update'):
+                  continue
+              value = json.loads(path.read_text())
+              print('TRACEWEAVE_PUBLIC_EVIDENCE_JSON=' + json.dumps(dict(name=path.name, data=value), separators=(',', ':')))
+          PYCODE
       - uses: actions/upload-artifact@v7
+        continue-on-error: true
         if: always()
         with:
           name: application-update-${{ matrix.arch }}-${{ matrix.base }}-${{ github.run_attempt }}

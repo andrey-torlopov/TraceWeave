@@ -204,7 +204,20 @@ jobs:
               for key, result in outcomes.items(): out.write('- '+key+': '+result+'\n')
               out.write('\nHTTP installation exercises the Docker-only operator path. HTTPS/account assertions use the host test harness. No private runtime logs, credentials or SMTP captures are uploaded.\n')
           PY
+      - name: Retain public evidence in the run log
+        if: always()
+        run: |
+          python3 - <<'PYCODE'
+          import json, os, pathlib
+          directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'traceweave-registry-evidence'
+          for path in sorted(directory.glob('*.json')):
+              if path.name != 'verification.json' and not path.name.startswith('0.2.0-update'):
+                  continue
+              value = json.loads(path.read_text())
+              print('TRACEWEAVE_PUBLIC_EVIDENCE_JSON=' + json.dumps(dict(name=path.name, data=value), separators=(',', ':')))
+          PYCODE
       - uses: actions/upload-artifact@v7
+        continue-on-error: true
         if: always()
         with:
           name: registry-verification-${{ matrix.arch }}-${{ github.run_attempt }}
