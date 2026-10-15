@@ -340,10 +340,16 @@ def preserved(owner, fixture, cookie, csrf, account):
     require(owner.json('GET', '/api/v1/session')['user']['id'] == account,
             'Original authenticated session is no longer valid.')
     current = owner.json('GET', path + '/nodes/' + node)
+    expected = copy.deepcopy(document)
+    # Migration 11 adds an explicit nullable field; every pre-existing value
+    # still participates in the complete document/layout/attachment comparison.
+    if 'iconEmoji' in current['node'] and 'iconEmoji' not in expected['node']:
+        expected['node']['iconEmoji'] = None
     require({key: value for key, value in current.items() if key != 'revision'} ==
-            {key: value for key, value in document.items() if key != 'revision'},
+            {key: value for key, value in expected.items() if key != 'revision'},
             'Original document/layout/attachment changed.')
     require(owner.request('GET', path + '/assets/' + asset + '/content')[0] == data, 'Immutable original bytes changed.')
+    return current
 
 
 def tombstones(operator, config, release):

@@ -180,6 +180,11 @@ def preserved_after_restore(owner, fixture, account):
     previous.preserved(owner, fixture, owner.cookie, owner.csrf, account)
 
 
+def require_legacy_icon_default(document):
+    require('iconEmoji' in document['node'] and document['node']['iconEmoji'] is None,
+            'Legacy document must have an explicit null personal icon after migration 11.')
+
+
 def failure_locations(error):
     """Public diagnostics identify assertions without response values or locals."""
     allowed = {ROOT / 'tools' / name for name in ['application_update_test.py', 'integration.py']}
@@ -254,7 +259,7 @@ def verify(args, evidence):
         after = previous.identities(operator, before_config, selected)
         require(before['db'] == after['db'] and before['gateway'] == after['gateway'], 'Migration restarted retained infrastructure.')
         require(all(before[key][0] != after[key][0] for key in ['backend', 'frontend']), 'Application containers were not replaced.')
-        previous.preserved(owner, fixture, cookie, csrf, account)
+        require_legacy_icon_default(previous.preserved(owner, fixture, cookie, csrf, account))
         require(owner.request('GET', entry)[0] == old_asset, 'Old pending frontend asset disappeared.')
         state = operator.read_json(runtime / 'operation.json')
         require(state['phase'] == 'ready' and state.get('backup'), 'No pre-update backup recorded.')

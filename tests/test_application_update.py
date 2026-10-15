@@ -15,6 +15,40 @@ from tools.update_integration import PreparedBatch
 ROOT = Path(__file__).resolve().parents[1]
 
 class ApplicationUpdateTests(unittest.TestCase):
+    def test_legacy_document_comparison_allows_only_the_explicit_null_icon_default(self):
+        original = {'revision': 1, 'node': {'id': 'node', 'title': 'Synthetic'},
+                    'layout': {'x': 12, 'y': -4}, 'attachments': [{'assetId': 'asset'}]}
+        fixture = ('/investigation', 'node', 'asset', b'original bytes', original)
+        before = copy.deepcopy(original)
+        current = copy.deepcopy(original)
+        current['revision'] = 2
+        current['node']['iconEmoji'] = None
+
+        def compare(value):
+            owner = SimpleNamespace(cookie='cookie', csrf='csrf', owner='account',
+                                    json=Mock(side_effect=[{'user': {'id': 'account'}}, value]),
+                                    request=Mock(return_value=(b'original bytes', {})))
+            return application_update_test.previous.preserved(owner, fixture, 'cookie', 'csrf', 'account')
+
+        self.assertEqual(compare(current), current)
+        self.assertEqual(compare(original), original)  # Restore to an old API remains readable.
+        self.assertEqual(original, before)
+        for kind in ['icon', 'title', 'layout', 'attachments', 'unknown']:
+            changed = copy.deepcopy(current)
+            if kind == 'icon': changed['node']['iconEmoji'] = '🧭'
+            elif kind == 'title': changed['node']['title'] = 'Changed'
+            elif kind == 'layout': changed['layout']['x'] = 100
+            elif kind == 'attachments': changed['attachments'] = []
+            else: changed['node']['unknownField'] = None
+            with self.subTest(kind=kind), self.assertRaisesRegex(AssertionError, 'Original document'):
+                compare(changed)
+
+    def test_migration_acceptance_requires_present_null_icon_for_legacy_documents(self):
+        application_update_test.require_legacy_icon_default({'node': {'iconEmoji': None}})
+        for node in [{}, {'iconEmoji': '🧭'}]:
+            with self.subTest(node=node), self.assertRaisesRegex(AssertionError, 'explicit null'):
+                application_update_test.require_legacy_icon_default({'node': node})
+
     def candidate(self):
         # Synthetic in-memory validation input, never written as a release or pulled.
         value = json.loads((ROOT / 'releases/0.1.4.json').read_text())
