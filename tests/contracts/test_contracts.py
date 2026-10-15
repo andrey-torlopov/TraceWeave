@@ -32,7 +32,7 @@ def project_fixture():
         row=example('NodeType');row.update(id=uid(index),investigationId=uid(1),code=code,isSystem=True);p['nodeTypes'].append(row)
     rt=example('RelationType');rt.update(id=uid(4),investigationId=uid(1),code='related_to');p['relationTypes'].append(rt)
     for index,typ in ((10,2),(11,2),(12,3)):
-        row=example('Node');row.update(id=uid(index),investigationId=uid(1),typeId=uid(typ));p['nodes'].append(row)
+        row=example('Node');row.pop('iconEmoji',None);row.update(id=uid(index),investigationId=uid(1),typeId=uid(typ));p['nodes'].append(row)
         p['layouts'].append({'nodeId':uid(index),'investigationId':uid(1),'x':index*10,'y':0,'zIndex':0})
     rel=example('Relation');rel.update(id=uid(20),investigationId=uid(1),sourceNodeId=uid(10),targetNodeId=uid(11),relationType='related_to',directed=False);p['relations'].append(rel)
     p['memberships'].append({'investigationId':uid(1),'groupNodeId':uid(12),'memberNodeId':uid(10),'sortOrder':0})
@@ -124,6 +124,9 @@ class ContractTests(unittest.TestCase):
     def test_length_after_trim_accepts_whitespace_input(self):schema_validator('NodeChanges',API).validate({'title':' '*201+'a'+' '*201})
     def test_length_counts_zwj_scalars_not_graphemes(self):self.reject('NodeChanges',{'title':'👩‍💻'*67})
     def test_nullable_patch(self):schema_validator('NodeChanges',API).validate({'subtitle':None})
+    def test_personal_emoji_is_one_qualified_sequence(self):
+        for value in ['😀', '👩🏽‍🔬', '🇷🇺', '1️⃣', None]:schema_validator('NodeChanges',API).validate({'iconEmoji':value})
+        for value in ['', 'a', '😀😀', ' 😀', '❤', '🏽']:self.reject('NodeChanges',{'iconEmoji':value})
     def test_type_group_reserved(self):v=example('NodeTypeInput');v['code']='group';self.reject('NodeTypeInput',v)
     def test_duplicate_tags(self):self.reject('NodeChanges',{'tags':['tag','tag']})
     def test_normalized_duplicate_tags(self):self.reject('NodeChanges',{'tags':['tag',' tag ']})

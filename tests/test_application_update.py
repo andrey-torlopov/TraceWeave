@@ -19,14 +19,14 @@ class ApplicationUpdateTests(unittest.TestCase):
         # Synthetic in-memory validation input, never written as a release or pulled.
         value = json.loads((ROOT / 'releases/0.1.4.json').read_text())
         for key in ['releaseId', 'frontendReleaseId', 'frontendVersion', 'backendVersion']:
-            value[key] = '0.1.9'
+            value[key] = '0.2.0'
         for key in ['backend', 'frontend', 'gateway', 'tools']:
             digest = hashlib.sha256(('synthetic application update unit fixture ' + key).encode()).hexdigest()
-            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.1.9@sha256:' + digest
+            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.2.0@sha256:' + digest
         contract = hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest()
         value['contractHash'] = value['backendContractHash'] = contract
         value['supportedClientContractHashes'] = [contract] + json.loads((ROOT / 'contracts/client-compatibility.json').read_text())
-        for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql'), (10, '0010-evidence-node-type.sql')]:
+        for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql'), (10, '0010-evidence-node-type.sql'), (11, '0011-project-portability-icons.sql')]:
             value['migrations'].append({'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()})
         value['source']['delivery'] = 'f' * 40
         return value
@@ -41,7 +41,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 selected = application_update_test.compatible(base, candidate)
                 control.validate_update(base, selected)
                 self.assertEqual((base, candidate), before)
-                self.assertEqual(selected['releaseId'], '0.1.9')
+                self.assertEqual(selected['releaseId'], '0.2.0')
                 same_schema = base['migrations'] == candidate['migrations']
                 self.assertEqual(set(control.changes(base, selected)), {'backend', 'frontend'} if same_schema else {'backend', 'frontend', 'tools'})
                 for key in ['postgres', 'gateway']:
@@ -57,8 +57,8 @@ class ApplicationUpdateTests(unittest.TestCase):
                     self.assertEqual(selected['source']['tools'], candidate['source']['delivery'])
                     self.assertEqual(selected['source']['toolsDiffHash'], candidate['source']['deliveryDiffHash'])
                 self.assertEqual(selected['migrations'][:len(base['migrations'])], base['migrations'])
-                self.assertEqual(len(selected['migrations']), 10)
-                self.assertEqual(selected['migrations'] == base['migrations'], version in ['0.1.7', '0.1.8'])
+                self.assertEqual(len(selected['migrations']), 11)
+                self.assertEqual(selected['migrations'] == base['migrations'], False)
                 for key in ['delivery', 'deliveryDiffHash']:
                     self.assertEqual(selected['source'][key], base['source'][key])
                 self.assertTrue(set(base['supportedClientContractHashes']) <= set(selected['supportedClientContractHashes']))
@@ -106,7 +106,7 @@ class ApplicationUpdateTests(unittest.TestCase):
             if name in variants:
                 self.assertEqual(variants[name], selected, filename)
             variants[name] = selected
-        self.assertEqual(len(variants), 21)
+        self.assertEqual(len(variants), 27)
 
     def test_published_older_tools_are_trusted_for_restore_by_local_release_catalog(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(control, 'RUNTIME', Path(directory)):
@@ -114,7 +114,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 with self.subTest(filename=filename):
                     base = json.loads((ROOT / 'releases' / filename).read_text())
                     installed = application_update_test.compatible(base, self.candidate())
-                    self.assertEqual(base['images']['tools'] == installed['images']['tools'], len(base['migrations']) == 10)
+                    self.assertEqual(base['images']['tools'] == installed['images']['tools'], len(base['migrations']) == 11)
                     control.require_trusted_restore_tools(base, installed)
 
     def test_pulled_tools_use_new_provenance_while_gateway_retains_the_original_delivery(self):
@@ -185,8 +185,8 @@ class ApplicationUpdateTests(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / '.github/workflows/application-update.yml').read_text())
         matrix = workflow['jobs']['published-update']['strategy']['matrix']['include']
         pairs = {(item['base'], item['arch']) for item in matrix}
-        self.assertEqual(len(application_update_test.BASES), 40)
-        self.assertEqual(len(matrix), 80)
+        self.assertEqual(len(application_update_test.BASES), 62)
+        self.assertEqual(len(matrix), 124)
         self.assertEqual(pairs, {(base, arch) for base in application_update_test.BASES for arch in ['amd64', 'arm64']})
         for item in matrix:
             base = json.loads((ROOT / 'releases' / application_update_test.BASES[item['base']][0]).read_text())

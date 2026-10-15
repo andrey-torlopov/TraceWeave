@@ -116,6 +116,12 @@ def _unique_normalized(validator, enabled, instance, schema):
             yield ValidationError('duplicate normalized value')
 
 
+_EMOJI17 = frozenset(json.loads((ROOT / 'contracts/emoji/17.0.json').read_text())['sequences'])
+def _emoji(validator, version, instance, schema):
+    if isinstance(instance, str) and (version != '17.0' or instance not in _EMOJI17 or len(instance.encode('utf-8')) > 128):
+        yield ValidationError('expected one qualified Emoji 17.0 sequence')
+
+
 ContractValidator = validators.extend(Draft202012Validator, {
     'minLength': _min_length,
     'maxLength': _max_length,
@@ -124,6 +130,7 @@ ContractValidator = validators.extend(Draft202012Validator, {
     'x-realCalendarDate': _calendar_date,
     'x-normalize': _normalized,
     'x-uniqueNormalized': _unique_normalized,
+    'x-emojiVersion': _emoji,
 })
 
 

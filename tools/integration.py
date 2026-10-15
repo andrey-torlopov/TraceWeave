@@ -399,6 +399,62 @@ def evidence_type_smoke(owner, *, path=None):
     print('PASS evidence catalog, ordinary document persistence and reload' + ('; both exports.' if fresh else ' after upgrade.'), flush=True)
 
 
+def project_portability_smoke(owner, second, fixture):
+    """Exercise the shipped full archive API on native Docker architectures."""
+    path = fixture['path']; node = fixture['node']
+    owner.commands(path, [{'kind': 'node.update', 'nodeId': node, 'changes': {'iconEmoji': '👩🏽‍🔬'}}])
+    before = owner.json('GET', path + '/graph')
+    ui = dict(formatVersion=1, viewport=dict(x=-123, y=222, zoom=0.75), inspector=node,
+              details=False, outline=True, cardShrinkFactor=4, iconSizeFactor=3)
+    job = owner.json('POST', path + '/exports', dict(kind='project_archive', idempotencyKey=uid(), sourceRevision=before['revision'], presentation=ui), expected=202)
+    export = path + '/exports/' + job['id']
+    for _ in range(300):
+        job = owner.json('GET', export)
+        if job['state'] in ['succeeded', 'failed']: break
+        time.sleep(.1)
+    require(job['state'] == 'succeeded', 'Full project export failed.')
+    archive = owner.request('GET', export + '/download', native=True)[0]
+    with zipfile.ZipFile(io.BytesIO(archive)) as z:
+        require(z.testzip() is None, 'Full ZIP CRC differs.')
+        manifest = json.loads(z.read('manifest.json')); project = json.loads(z.read('project.json'))
+        require(manifest['formatVersion'] == '2.0' and manifest['producer']['backendCommit'], 'Archive lacks pinned release provenance.')
+        require(json.loads(z.read('presentation.json')) == ui, 'Exported presentation differs.')
+        for blob in project['blobs']:
+            original = z.read(blob['path'])
+            require(len(original) == blob['byteSize'] and hashlib.sha256(original).hexdigest() == blob['sha256'], 'Full archive omitted or changed an original.')
+    imported = second.json('POST', '/api/v1/imports', dict(idempotencyKey=uid(), originalName='synthetic.zip', expectedByteSize=len(archive)), expected=201)
+    target = '/api/v1/imports/' + imported['id']
+    owner.request('GET', target, expected=404)
+    second.json('PUT', target + '/content', raw=archive, headers={'Content-Type': 'application/octet-stream'})
+    second.json('POST', target + '/validate', {'idempotencyKey': uid()}, expected=202)
+    for _ in range(300):
+        imported = second.json('GET', target)
+        if imported['phase'] in ['validated', 'failed']: break
+        time.sleep(.1)
+    require(imported['phase'] == 'validated' and imported['plan']['nodeCount'] == len(project['nodes']), 'Full archive validation/count differs.')
+    body = dict(idempotencyKey=uid(), title=None, planSha256=imported['plan']['planSha256'])
+    result = second.json('POST', target + '/commit', body, expected=201)
+    replay = second.json('POST', target + '/commit', body, expected=201)
+    require(replay['replayed'] and replay['investigation']['id'] == result['investigation']['id'], 'Import retry duplicated the project.')
+    copied = '/api/v1/investigations/' + result['investigation']['id']
+    after = second.json('GET', copied + '/graph')
+    require(len(after['nodes']) == len(before['nodes']) and len(after['relations']) == len(before['relations']), 'Imported graph membership differs.')
+    copied_node = next(item for item in after['nodes'] if item['title'] == fixture['title'])
+    require(copied_node['id'] != node and copied_node['iconEmoji'] == '👩🏽‍🔬', 'Personal symbol/identity did not transfer.')
+    before_layout = next(item for item in before['layouts'] if item['nodeId'] == node)
+    after_layout = next(item for item in after['layouts'] if item['nodeId'] == copied_node['id'])
+    require(all(before_layout[key] == after_layout[key] for key in ['x', 'y', 'zIndex']), 'Imported layout differs.')
+    seed = result['investigation']['presentationSeed']
+    require(seed['viewport'] == ui['viewport'] and seed['inspector'] == copied_node['id'], 'Imported server presentation seed differs.')
+    document = second.json('GET', copied + '/nodes/' + copied_node['id'])
+    require(document['node']['bodyMarkdown'] == fixture['body'], 'Imported document text differs.')
+    expected = sorted(fixture['originals'].values())
+    actual = sorted(second.request('GET', copied + '/assets/' + asset['id'] + '/content', native=True)[0] for asset in document['assets'])
+    require(actual == expected, 'Imported material/original bytes differ.')
+    owner.request('GET', copied, expected=404)
+    print('PASS full project ZIP, pinned producer/schema, original byte proofs, two-account import, UUID/layout/emoji/presentation and exact commit replay.', flush=True)
+
+
 def smoke(runtime,origin):
     owner=Client(origin);session=owner.login();require(session['user']['email']==EMAIL,'Canonical email missing.')
     require(owner.json('GET','/api/v1/accounts/config')['registrationEnabled'] is False,'Local registration must be disabled.')
@@ -443,6 +499,8 @@ def smoke(runtime,origin):
         second.request('GET',capture['path'],expected=404)
         for method in ['GET','HEAD']:second.request(method,capture['path']+'/download',native=True,expected=404)
     verify_file_report_smoke(owner,files)
+    require(owner.json('GET', '/api/v1/capabilities')['features'].get('projectArchive') is True, 'Candidate must advertise full project portability.')
+    project_portability_smoke(owner,second,files)
     second.request('POST',path+'/commands',batch,expected=404)
     owner.request('GET',path,headers={'X-TraceWeave-Account-ID':second.owner},expected=409)
     owner.request('POST',path+'/commands',batch,headers={'X-TraceWeave-Client-Contract':'0'*64},expected=409)

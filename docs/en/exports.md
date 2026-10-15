@@ -22,3 +22,11 @@ The archive reflects the saved state when requested. Later card edits do not cha
 ---
 
 [Features](features.md) · [Files and attachments](attachments.md) · [Documentation](index.md)
+
+## Portable projects (0.2.0)
+
+Choose “Экспортировать проект” in the export menu for a standalone ZIP containing the full investigation: live and trashed objects, types, attributes, groups, absolute layouts, original files, report definitions and immutable snapshots. Camera, inspector, panels and sizing preferences are included. The other two export formats retain their existing Markdown/report scope.
+
+In the investigation list, choose “Импортировать проект”, upload the ZIP, review the validated counts and confirm creation. Import creates a separate investigation under the current account with remapped UUIDs and internal links. It preserves source status, dates and provenance; the new revision starts at zero. Account credentials and undo/redo history are excluded. Existing projects are unaffected; failed validation/commit never exposes a partial project. Retrying the same confirmation replays its receipt. Jobs expire after 24 hours.
+
+Archive format 2.0 is independent of application/database versions and pins its schema ID/hash, producer release/commits and required features. Both frozen legacy 1.0 profiles are readable; absent presentation uses default camera/panels. Unknown formats/features require a newer application and are rejected without discarding data. ZIP limits are 10 GiB upload, 512 MiB per original, 64 MiB project metadata, 50,000 entries, 20 GiB expanded data and 1000 expansion ratio, plus account/installation quotas and available disk space. Our writer uses STORE. Transfer archives only to trusted recipients: they include the trash and historical information.

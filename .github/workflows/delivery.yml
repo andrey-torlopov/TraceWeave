@@ -63,6 +63,7 @@ jobs:
           .ci/venv/bin/python tools/validate_contracts.py
           .ci/venv/bin/python -m unittest discover -s tests -v
           .ci/venv/bin/python -m unittest discover -s tests/contracts -p test_contracts.py -v
+          python3 tools/sync_emoji.py --check --backend-root .ci/backend --frontend-root .ci/frontend
           python3 -I tools/ci_release_tests.py --self-test
           python3 -I tools/update_integration.py --help
           sh -n bootstrap.sh traceweave.sh db/entrypoint.sh db/init.sh

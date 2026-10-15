@@ -3,7 +3,7 @@
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "TraceWeave P0 API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Normative E0 contract. JSON-compatible YAML. Unknown fields and duplicate JSON keys are rejected. All domain changes use commands. Technical jobs do not mutate graph data. Definitions and runtime invariants: docs/contract-decisions.md. CR-E8-001: accounts, Docker maintenance and explicit client/account binding."
   },
   "servers": [
@@ -1476,7 +1476,8 @@
                     "reports": false,
                     "projectArchive": false,
                     "plugins": false,
-                    "externalConnectors": false
+                    "externalConnectors": false,
+                    "nodeIconEmoji": true
                   }
                 }
               }
@@ -3066,7 +3067,8 @@
                     "deletionBatchId": null,
                     "origin": {
                       "kind": "manual"
-                    }
+                    },
+                    "iconEmoji": null
                   },
                   "attributes": [],
                   "layout": {
@@ -9772,7 +9774,20 @@
               "example": {
                 "idempotencyKey": "30000000-0000-4000-8000-000000000001",
                 "kind": "project_archive",
-                "sourceRevision": 0
+                "sourceRevision": 0,
+                "presentation": {
+                  "formatVersion": 1,
+                  "viewport": {
+                    "x": 0,
+                    "y": 0,
+                    "zoom": 1
+                  },
+                  "inspector": null,
+                  "details": true,
+                  "outline": true,
+                  "cardShrinkFactor": 3,
+                  "iconSizeFactor": 2
+                }
               }
             }
           }
@@ -12347,7 +12362,8 @@
               },
               "example": {
                 "idempotencyKey": "30000000-0000-4000-8000-000000000001",
-                "title": null
+                "title": null,
+                "planSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
               }
             }
           }
@@ -17797,6 +17813,16 @@
                 "type": "null"
               }
             ]
+          },
+          "presentationSeed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortablePresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -18079,6 +18105,20 @@
           },
           "origin": {
             "$ref": "#/components/schemas/Origin"
+          },
+          "iconEmoji": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "x-maxUtf8Bytes": 128,
+                "x-emojiVersion": "17.0"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -18117,7 +18157,8 @@
             "deletionBatchId": null,
             "origin": {
               "kind": "manual"
-            }
+            },
+            "iconEmoji": null
           }
         ]
       },
@@ -18230,6 +18271,20 @@
               "$ref": "#/components/schemas/AttributeInput"
             },
             "minItems": 0
+          },
+          "iconEmoji": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "x-maxUtf8Bytes": 128,
+                "x-emojiVersion": "17.0"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -18335,6 +18390,20 @@
           },
           "extensions": {
             "$ref": "#/components/schemas/Extensions"
+          },
+          "iconEmoji": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "x-maxUtf8Bytes": 128,
+                "x-emojiVersion": "17.0"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [],
@@ -20886,7 +20955,8 @@
               "deletionBatchId": null,
               "origin": {
                 "kind": "manual"
-              }
+              },
+              "iconEmoji": null
             },
             "attributes": [],
             "layout": {
@@ -21186,6 +21256,20 @@
           },
           "hasEvidence": {
             "type": "boolean"
+          },
+          "iconEmoji": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "x-maxUtf8Bytes": 128,
+                "x-emojiVersion": "17.0"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -21218,7 +21302,8 @@
             "updatedAt": "2026-10-08T12:00:00.000Z",
             "attachmentCount": 0,
             "primaryAssetId": null,
-            "hasEvidence": false
+            "hasEvidence": false,
+            "iconEmoji": null
           }
         ]
       },
@@ -27788,7 +27873,8 @@
               },
               "externalConnectors": {
                 "const": false
-              }
+              },
+              "nodeIconEmoji": true
             },
             "required": [
               "reports",
@@ -27849,7 +27935,8 @@
               "reports": false,
               "projectArchive": false,
               "plugins": false,
-              "externalConnectors": false
+              "externalConnectors": false,
+              "nodeIconEmoji": true
             }
           }
         ]
@@ -28225,19 +28312,36 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "presentation": {
+            "$ref": "#/components/schemas/PortablePresentation"
           }
         },
         "required": [
           "idempotencyKey",
           "kind",
-          "sourceRevision"
+          "sourceRevision",
+          "presentation"
         ],
         "additionalProperties": false,
         "examples": [
           {
             "idempotencyKey": "30000000-0000-4000-8000-000000000001",
             "kind": "project_archive",
-            "sourceRevision": 0
+            "sourceRevision": 0,
+            "presentation": {
+              "formatVersion": 1,
+              "viewport": {
+                "x": 0,
+                "y": 0,
+                "zoom": 1
+              },
+              "inspector": null,
+              "details": true,
+              "outline": true,
+              "cardShrinkFactor": 3,
+              "iconSizeFactor": 2
+            }
           }
         ]
       },
@@ -28367,7 +28471,20 @@
           {
             "idempotencyKey": "30000000-0000-4000-8000-000000000001",
             "kind": "project_archive",
-            "sourceRevision": 0
+            "sourceRevision": 0,
+            "presentation": {
+              "formatVersion": 1,
+              "viewport": {
+                "x": 0,
+                "y": 0,
+                "zoom": 1
+              },
+              "inspector": null,
+              "details": true,
+              "outline": true,
+              "cardShrinkFactor": 3,
+              "iconSizeFactor": 2
+            }
           },
           {
             "idempotencyKey": "30000000-0000-4000-8000-000000000001",
@@ -28741,17 +28858,23 @@
                 "type": "null"
               }
             ]
+          },
+          "planSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
           "idempotencyKey",
-          "title"
+          "title",
+          "planSha256"
         ],
         "additionalProperties": false,
         "examples": [
           {
             "idempotencyKey": "30000000-0000-4000-8000-000000000001",
-            "title": null
+            "title": null,
+            "planSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           }
         ]
       },
@@ -28800,18 +28923,15 @@
           },
           "snapshotCount": {
             "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
+            "minimum": 0
           },
           "trashedObjectCount": {
             "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
+            "minimum": 0
           },
           "originalByteSize": {
             "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
+            "minimum": 0
           },
           "warnings": {
             "type": "array",
@@ -28821,6 +28941,16 @@
               "pattern": "^[^\\u0000]*$"
             },
             "minItems": 0
+          },
+          "formatVersion": {
+            "type": "string"
+          },
+          "planSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "presentationAvailable": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -28833,7 +28963,10 @@
           "snapshotCount",
           "trashedObjectCount",
           "originalByteSize",
-          "warnings"
+          "warnings",
+          "formatVersion",
+          "planSha256",
+          "presentationAvailable"
         ],
         "additionalProperties": false,
         "examples": [
@@ -28847,7 +28980,10 @@
             "snapshotCount": 0,
             "trashedObjectCount": 0,
             "originalByteSize": 0,
-            "warnings": []
+            "warnings": [],
+            "formatVersion": "2.0",
+            "planSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "presentationAvailable": true
           }
         ]
       },
@@ -30424,6 +30560,83 @@
           }
         ],
         "description": "One human-readable report.md and Attachments in a ZIP, captured at sourceRevision without changing graph revision. No generated identifiers, layout, frontmatter or service metadata; raw Obsidian export remains available."
+      },
+      "PortablePresentation": {
+        "type": "object",
+        "properties": {
+          "formatVersion": {
+            "const": 1
+          },
+          "viewport": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -1000000000,
+                "maximum": 1000000000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -1000000000,
+                "maximum": 1000000000
+              },
+              "zoom": {
+                "type": "number",
+                "minimum": 0.1,
+                "maximum": 2.5
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "zoom"
+            ],
+            "additionalProperties": false
+          },
+          "inspector": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "allOf": [
+                  {
+                    "pattern": "^[^\\u0000]*$"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "details": {
+            "type": "boolean"
+          },
+          "outline": {
+            "type": "boolean"
+          },
+          "cardShrinkFactor": {
+            "type": "number",
+            "minimum": 1.1,
+            "maximum": 10
+          },
+          "iconSizeFactor": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 4
+          }
+        },
+        "required": [
+          "formatVersion",
+          "viewport",
+          "inspector",
+          "details",
+          "outline",
+          "cardShrinkFactor",
+          "iconSizeFactor"
+        ],
+        "additionalProperties": false
       }
     }
   }

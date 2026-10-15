@@ -23,3 +23,7 @@ Version 0.1.7 adds **Улика** (Evidence) with a magnifying-glass icon 🔍. 
 ---
 
 [Documentation](index.md) · [README](../../README.md)
+
+## Document symbols (0.2.0)
+
+Choose a semantic type from the icon grid. A single qualified Emoji 17.0 sequence can override the symbol for this document, including flags, skin tones and ZWJ sequences. This preserves its semantic type, attributes and templates. Resetting the symbol restores the type icon; other documents are unaffected.

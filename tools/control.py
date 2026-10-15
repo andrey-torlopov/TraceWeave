@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """TraceWeave operator CLI. Persistent phases fail closed; data volumes are never removed."""
 from __future__ import annotations
+import base64
 import argparse
 from contextlib import contextmanager
 import datetime
@@ -651,7 +652,10 @@ def build_source(a):
         return [argument for key,value in values.items() for argument in ['--label',key+'='+value]]
     execute(['docker','build',*labels('tools'),'-t',tools_image,'-f',str(ROOT/'tools/Dockerfile'),str(ROOT)])
     execute(['docker','build',*labels('gateway'),'-t','traceweave/gateway:'+rid,'-f',str(ROOT/'gateway/Dockerfile'),str(ROOT)])
-    execute(['docker','build',*labels('backend'),'--build-arg','BACKEND_VERSION='+versions['backend'],'--build-arg','OPENAPI_CONTRACT_SHA256='+contract,'--build-arg','SOURCE_REVISION='+before[0]['backend'],'-t','traceweave/backend:'+rid,str(backend)])
+    producer = dict(version=versions['backend'], releaseTag=('v'+versions['backend']) if tagged_delivery and versions['backend']==versions['frontend']==versions['delivery'] else None,
+                    backendCommit=before[0]['backend'], frontendCommit=before[0]['frontend'], contractsCommit=before[0].get('delivery'))
+    producer_arg = base64.b64encode(json.dumps(producer, separators=(',', ':')).encode()).decode()
+    execute(['docker','build',*labels('backend'),'--build-arg','BACKEND_VERSION='+versions['backend'],'--build-arg','OPENAPI_CONTRACT_SHA256='+contract,'--build-arg','SOURCE_REVISION='+before[0]['backend'],'--build-arg','PORTABLE_PRODUCER_BASE64='+producer_arg,'-t','traceweave/backend:'+rid,str(backend)])
     execute(['docker','build',*labels('frontend'),'--build-context','contract='+str(ROOT/'contracts'),'--build-arg','OPENAPI_CONTRACT_SHA256='+contract,'--build-arg','RELEASE_ID='+frontend_release,'--build-arg','FRONTEND_VERSION='+versions['frontend'],'-t','traceweave/frontend:'+rid,str(frontend)])
     execute(['docker','pull',PG_IMAGE])
     images={k:execute(['docker','image','inspect','--format','{{.Id}}',v],capture=True) for k,v in [('backend','traceweave/backend:'+rid),('frontend','traceweave/frontend:'+rid),('tools',tools_image),('gateway','traceweave/gateway:'+rid)]}
