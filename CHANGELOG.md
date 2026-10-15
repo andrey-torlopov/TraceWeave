@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-10-15
+
+- Deliver fixed-size graph context menus, a resizable document editor with per-project browser preferences, and immediate attachment-status reconciliation.
+- Serve maintenance HTML through a native Caddy heredoc so newline escapes cannot become visible page content.
+- Keep API 1.4.0, schema 11, dependency locks and original files unchanged; verify same-schema update and image rollback from 0.2.0.
+
 ## 0.2.0 — 2026-10-15
 
 - Deliver complete project ZIP transfer and a per-document emoji/type icon picker as one coordinated release.

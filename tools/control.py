@@ -153,11 +153,12 @@ def caddy_config(config,release,maintenance):
     handle /release.json {\n        root * /etc/traceweave\n        header Cache-Control no-store\n        header Content-Type application/json\n        file_server\n    }\n'''+headers+'\n'
     if maintenance:
         error=json.dumps({'error':{'code':'service_maintenance','message':'Идёт обслуживание сервиса.','requestId':'00000000-0000-4000-8000-000000000000','details':None}},ensure_ascii=False,separators=(',',':'))
+        # Caddy preserves JSON newline escapes literally; heredoc keeps the HTML intact.
         common+='''header Cache-Control no-store
     header Retry-After 15
     @api path /api/* /health/*
     handle @api {\n        header Content-Type application/json\n        respond '''+json.dumps(error,ensure_ascii=False)+''' 503\n    }
-    handle {\n        header Content-Type "text/html; charset=utf-8"\n        respond '''+json.dumps(html,ensure_ascii=False)+''' 503\n    }\n'''
+    handle {\n        header Content-Type "text/html; charset=utf-8"\n        respond <<TRACEWEAVE_MAINTENANCE\n'''+html+'''\nTRACEWEAVE_MAINTENANCE 503\n    }\n'''
     else:
         common+='''@api path /api/* /health/*
     handle @api {

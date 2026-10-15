@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       candidate_json:
-        description: Complete 0.2.0 candidate.json from successful full publication
+        description: Complete 0.2.1 candidate.json from successful full publication
         type: string
         required: true
 permissions:
   contents: read
 concurrency:
-  group: published-update-${{ github.repository }}-0.2.0
+  group: published-update-${{ github.repository }}-0.2.1
   cancel-in-progress: false
 defaults:
   run:
@@ -516,6 +516,230 @@ jobs:
             arch: arm64
             base: v019-0.1.9
             legacy_tag: v0.1.9
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.0-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.0-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.1-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.1-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.3-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.3-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.4-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.4-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.6-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.7
+            legacy_tag: v0.1.7
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.7-infra-0.1.7
+            legacy_tag: v0.1.7
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.8
+            legacy_tag: v0.1.8
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.8-infra-0.1.8
+            legacy_tag: v0.1.8
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.0
+            legacy_tag: v0.1.0
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.1
+            legacy_tag: v0.1.1
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.3
+            legacy_tag: v0.1.3
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.4
+            legacy_tag: v0.1.4
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.6
+            legacy_tag: v0.1.6
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.9
+            legacy_tag: v0.1.9
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0-update-tools-0.1.9-infra-0.1.9
+            legacy_tag: v0.1.9
+          - runner: ubuntu-24.04
+            arch: amd64
+            base: v020-0.2.0
+            legacy_tag: v0.2.0
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            base: v020-0.2.0
+            legacy_tag: v0.2.0
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     env:
@@ -584,7 +808,7 @@ jobs:
           import json, os, pathlib
           directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'published-update-evidence'
           for path in sorted(directory.glob('*.json')):
-              if path.name != 'verification.json' and not path.name.startswith('0.2.0-update'):
+              if path.name != 'verification.json' and not path.name.startswith('0.2.1-update'):
                   continue
               value = json.loads(path.read_text())
               print('TRACEWEAVE_PUBLIC_EVIDENCE_JSON=' + json.dumps(dict(name=path.name, data=value), separators=(',', ':')))
@@ -596,6 +820,6 @@ jobs:
           name: application-update-${{ matrix.arch }}-${{ matrix.base }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/published-update-evidence/verification.json
-            ${{ runner.temp }}/published-update-evidence/0.2.0-update*.json
+            ${{ runner.temp }}/published-update-evidence/0.2.1-update*.json
           retention-days: 90
           if-no-files-found: error

@@ -211,7 +211,7 @@ jobs:
           import json, os, pathlib
           directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'traceweave-registry-evidence'
           for path in sorted(directory.glob('*.json')):
-              if path.name != 'verification.json' and not path.name.startswith('0.2.0-update'):
+              if path.name != 'verification.json' and not path.name.startswith('0.2.1-update'):
                   continue
               value = json.loads(path.read_text())
               print('TRACEWEAVE_PUBLIC_EVIDENCE_JSON=' + json.dumps(dict(name=path.name, data=value), separators=(',', ':')))

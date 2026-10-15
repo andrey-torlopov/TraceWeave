@@ -535,6 +535,7 @@ def main():
         body,headers=owner.request('GET',target,expected=503)
         require(headers.get('cache-control')=='no-store' and headers.get('retry-after')=='15','Maintenance caching/retry headers invalid.')
         if target.startswith('/api'):require(json.loads(body)['error']['code']=='service_maintenance','Maintenance JSON invalid.')
+        else:require(body.decode('utf-8')==(ROOT/'gateway/maintenance.html').read_text().strip(),'Maintenance HTML differs from its template.')
     owner.request('GET','/release.json');cli(runtime,'resume','--yes')
     cli(runtime,'backup')
     state=json.loads((runtime/'operation.json').read_text());backup=state['backup'];saved=json.loads((runtime/'backups'/backup/'manifest.json').read_text())

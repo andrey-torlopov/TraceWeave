@@ -18,7 +18,7 @@ from tools import control, integration
 from tools import published_update_test as previous
 from tools.update_integration import prepare_batch, apply_prepared_and_edit
 require = integration.require
-TARGET_VERSION = '0.2.0'
+TARGET_VERSION = '0.2.1'
 TARGET_SCHEMA = 11
 BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'),
          'retained': ('0.1.3-update.json', '0.1.3'), 'full': ('0.1.3.json', '0.1.3'),
@@ -62,6 +62,8 @@ BASES = {'original': ('0.1.0.json', '0.1.0'), 'previous': ('0.1.1.json', '0.1.1'
 # Every immutable published 0.1.9 infrastructure/tools variant is an update baseline.
 for _manifest in sorted((ROOT / 'releases').glob('0.1.9*.json')):
     BASES['v019-' + _manifest.stem] = (_manifest.name, '0.1.9')
+for _manifest in sorted((ROOT / 'releases').glob('0.2.0*.json')):
+    BASES['v020-' + _manifest.stem] = (_manifest.name, '0.2.0')
 
 CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
           'guided_automatic_backup_migration', 'graph_settings_frontend_asset', 'old_pending_relation_exact_replay',
@@ -73,8 +75,8 @@ CHECKS = {'anonymous_native_provenance', 'published_previous_bootstrap',
 def compatible(base, candidate):
     previous.published_manifest(candidate, TARGET_VERSION)
     control.validate_manifest(base)
-    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4', '0.1.6', '0.1.7', '0.1.8', '0.1.9'], 'Expected previous application pair.')
-    require(len(base['migrations']) in [6, 7, 9, 10] and len(candidate['migrations']) == TARGET_SCHEMA and
+    require(base['backendVersion'] == base['frontendVersion'] and base['backendVersion'] in ['0.1.0', '0.1.1', '0.1.3', '0.1.4', '0.1.6', '0.1.7', '0.1.8', '0.1.9', '0.2.0'], 'Expected previous application pair.')
+    require(len(base['migrations']) in [6, 7, 9, 10, 11] and len(candidate['migrations']) == TARGET_SCHEMA and
             candidate['migrations'][:len(base['migrations'])] == base['migrations'], 'Existing migration history must be preserved.')
     feature_migrations = [{'version': version, 'sha256': hashlib.sha256((ROOT / 'contracts/migrations' / name).read_bytes()).hexdigest()}
                           for version, name in [(8, '0008-file-attachments.sql'), (9, '0009-readable-report.sql'), (10, '0010-evidence-node-type.sql'), (11, '0011-project-portability-icons.sql')]]

@@ -53,10 +53,10 @@ class ApplicationUpdateTests(unittest.TestCase):
         # Synthetic in-memory validation input, never written as a release or pulled.
         value = json.loads((ROOT / 'releases/0.1.4.json').read_text())
         for key in ['releaseId', 'frontendReleaseId', 'frontendVersion', 'backendVersion']:
-            value[key] = '0.2.0'
+            value[key] = '0.2.1'
         for key in ['backend', 'frontend', 'gateway', 'tools']:
             digest = hashlib.sha256(('synthetic application update unit fixture ' + key).encode()).hexdigest()
-            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.2.0@sha256:' + digest
+            value['images'][key] = 'docker.io/andreytorlopov/traceweave-' + key + ':0.2.1@sha256:' + digest
         contract = hashlib.sha256((ROOT / 'contracts/openapi.yaml').read_bytes()).hexdigest()
         value['contractHash'] = value['backendContractHash'] = contract
         value['supportedClientContractHashes'] = [contract] + json.loads((ROOT / 'contracts/client-compatibility.json').read_text())
@@ -75,7 +75,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                 selected = application_update_test.compatible(base, candidate)
                 control.validate_update(base, selected)
                 self.assertEqual((base, candidate), before)
-                self.assertEqual(selected['releaseId'], '0.2.0')
+                self.assertEqual(selected['releaseId'], '0.2.1')
                 same_schema = base['migrations'] == candidate['migrations']
                 self.assertEqual(set(control.changes(base, selected)), {'backend', 'frontend'} if same_schema else {'backend', 'frontend', 'tools'})
                 for key in ['postgres', 'gateway']:
@@ -92,7 +92,7 @@ class ApplicationUpdateTests(unittest.TestCase):
                     self.assertEqual(selected['source']['toolsDiffHash'], candidate['source']['deliveryDiffHash'])
                 self.assertEqual(selected['migrations'][:len(base['migrations'])], base['migrations'])
                 self.assertEqual(len(selected['migrations']), 11)
-                self.assertEqual(selected['migrations'] == base['migrations'], False)
+                self.assertEqual(selected['migrations'] == base['migrations'], len(base['migrations']) == 11)
                 for key in ['delivery', 'deliveryDiffHash']:
                     self.assertEqual(selected['source'][key], base['source'][key])
                 self.assertTrue(set(base['supportedClientContractHashes']) <= set(selected['supportedClientContractHashes']))
@@ -140,7 +140,7 @@ class ApplicationUpdateTests(unittest.TestCase):
             if name in variants:
                 self.assertEqual(variants[name], selected, filename)
             variants[name] = selected
-        self.assertEqual(len(variants), 27)
+        self.assertEqual(len(variants), 36)  # 0.2.0 adds same-schema tools/infrastructure variants.
 
     def test_published_older_tools_are_trusted_for_restore_by_local_release_catalog(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(control, 'RUNTIME', Path(directory)):
@@ -219,8 +219,8 @@ class ApplicationUpdateTests(unittest.TestCase):
         workflow = yaml.safe_load((ROOT / '.github/workflows/application-update.yml').read_text())
         matrix = workflow['jobs']['published-update']['strategy']['matrix']['include']
         pairs = {(item['base'], item['arch']) for item in matrix}
-        self.assertEqual(len(application_update_test.BASES), 62)
-        self.assertEqual(len(matrix), 124)
+        self.assertEqual(len(application_update_test.BASES), 90)
+        self.assertEqual(len(matrix), 180)
         self.assertEqual(pairs, {(base, arch) for base in application_update_test.BASES for arch in ['amd64', 'arm64']})
         for item in matrix:
             base = json.loads((ROOT / 'releases' / application_update_test.BASES[item['base']][0]).read_text())
