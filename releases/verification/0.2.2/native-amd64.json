@@ -1,0 +1,108 @@
+{
+  "release": {
+    "formatVersion": 1,
+    "releaseId": "0.2.2",
+    "frontendReleaseId": "0.2.2",
+    "frontendVersion": "0.2.2",
+    "backendVersion": "0.2.2",
+    "backendContractHash": "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+    "images": {
+      "backend": "sha256:532f1f4615f3942d36bbf6273b855964bf66b538bc5160b08e00eaa4ecae1282",
+      "frontend": "sha256:06384902d6698c4f663a9bfa4b88339595b9a943d6898a739ff985cfa7296f1c",
+      "tools": "sha256:32cd6960eaf0acdf09e1e7ff10034952d4ef671463cdafae67c94223fd189bcf",
+      "gateway": "sha256:47c3dbd59eab6b38a4efb8d8c372663580d6dfd152ee969c49214f5f31c20e3a",
+      "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
+    },
+    "postgresMajor": 18,
+    "contractHash": "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+    "supportedClientContractHashes": [
+      "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+      "bd1c6ed182bbd63e91401bc7018593a92b76682c62c498a35a928e7dd26f832c",
+      "5b9da16997f94c15dd952224292961c2de8f90b31a12e0ff4d14da89a6048281",
+      "489ebec910e10c88715e1d1906ddd6614cedb6dcfbe43844f3e4ca4ee0a22852"
+    ],
+    "migrations": [
+      {
+        "version": 1,
+        "sha256": "c30e6a5f2dda4be6a951555330393741f43d2beb4fa69c722e0295cf0aa547ea"
+      },
+      {
+        "version": 2,
+        "sha256": "5631c54f9a47da710d10c8c6bac86c5651e6181c0e7b267bf3153c4a329498b2"
+      },
+      {
+        "version": 3,
+        "sha256": "d8abde0ecf5fbc8e740d926def20288ab5bcdec6a1425943fc4a4034be00f927"
+      },
+      {
+        "version": 4,
+        "sha256": "4b5d9cb32c93361a11e61b27f2b6b77c3e6835d87f94530befcdd54e1eb51f88"
+      },
+      {
+        "version": 5,
+        "sha256": "19b968caedbe37512cdd5856c345e937894125f7b6d34fea103223179909262b"
+      },
+      {
+        "version": 6,
+        "sha256": "46f035d60a0a3abd06ca418fb12ca215ffdec4355ae40330b59ee44c28043889"
+      },
+      {
+        "version": 7,
+        "sha256": "7164070e645dbd0172b722de5d7fbeaf2c4a976d628f71e939e9bad9efa8544e"
+      },
+      {
+        "version": 8,
+        "sha256": "2e540dbd4b04d39dc7187393611dbd19142e4770c4180296f537f376e2d64c45"
+      },
+      {
+        "version": 9,
+        "sha256": "b1c43ecc34ff5769ef9c5fb4df6b131900454246f05ed6badd8452a55e5d45e8"
+      },
+      {
+        "version": 10,
+        "sha256": "371861ae0614ad196634457675df84bcd6722b6906eb21c06ef12864c08a0f18"
+      },
+      {
+        "version": 11,
+        "sha256": "7ded2a5cddf1ba1e5a598acebed3e9eab26b0e7788ea809eea96646c22b4d399"
+      }
+    ],
+    "platforms": [
+      "linux/amd64"
+    ],
+    "source": {
+      "backend": "1a9b45c6d00fb90e83e9652cad579ef0a2ba1b2c",
+      "frontend": "0d4f1fac5b36cfe0e9ff0eb8ec0194bf37f3062e",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "8c0e8f4c24ac898cd1f629a46a8ebce10c592c6a",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "validation": "built; run integration before publication",
+    "rollback": "same migration history only; otherwise restore verified backup"
+  },
+  "components": [
+    "backend",
+    "frontend",
+    "gateway",
+    "tools"
+  ],
+  "arch": "amd64",
+  "sourceTags": {
+    "backend": "v0.2.2",
+    "frontend": "v0.2.2",
+    "delivery": "v0.2.2"
+  },
+  "versions": {
+    "backend": "0.2.2",
+    "frontend": "0.2.2",
+    "gateway": "0.2.2",
+    "tools": "0.2.2"
+  },
+  "nativeDigests": {
+    "backend": "sha256:479923e150e5569cc268d552c28ece6207f9977a7ad07f08ab65be63341d6bc1",
+    "frontend": "sha256:03872eff43a1ec04615cb2264f7dc6f4e4de2bc08d8fa220264eb2975b48b67a",
+    "gateway": "sha256:a9ad80c18c5c34aec79fa9734371997499b89c28dbb981368e189dba2e305ddb",
+    "tools": "sha256:67d8271bb9d2cd216d16fb0722ed27cfe7fa4dd7ae42b72c021d681596f7dc2b"
+  }
+}

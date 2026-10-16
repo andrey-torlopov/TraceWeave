@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "releaseId": "0.2.1",
-  "frontendReleaseId": "0.2.1",
-  "frontendVersion": "0.2.1",
-  "backendVersion": "0.2.1",
+  "releaseId": "0.2.2",
+  "frontendReleaseId": "0.2.2",
+  "frontendVersion": "0.2.2",
+  "backendVersion": "0.2.2",
   "backendContractHash": "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
   "images": {
-    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.1@sha256:aa0679560ff52a483df8d94056b4024217717436f4718fab247647ef0e53d4c6",
-    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.1@sha256:5071c8e485d314bc781917f8cf3098d566303d7c9f1549bd96103cfd9a26308d",
-    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.1@sha256:590acfe8719c2bcb31ced642281755ecffd1a1473d70d8bb32faf27d418e81a8",
-    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.2.1@sha256:b443c0498a05f7560bcd7d1ae462397c704413d31307101ddf9d49e602f6a5f2",
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.2@sha256:1982de532d5c14b8363bd0d32294ff2ba0690c18ec553c9a8ebcbca3cd670ee3",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.2@sha256:542f57000224bfde63a446be4b3640e7238670dbe4e8be73d42baf28858e7199",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.2@sha256:31221501ce7dedf55237d3b51e7f59fe5321546294717ad74fbe16c5b593cf99",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.2.2@sha256:26d68eed148718edf5181a43adfbab339c4114d048f371f6f0f3ce90976ed483",
     "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
   },
   "postgresMajor": 18,
@@ -71,13 +71,13 @@
     "linux/arm64"
   ],
   "source": {
-    "backend": "60364932e8ccdde8e083e40e5edc2018720da8ef",
-    "frontend": "38da2d8d6bf55c2034565d103549b1d9768691b7",
+    "backend": "1a9b45c6d00fb90e83e9652cad579ef0a2ba1b2c",
+    "frontend": "0d4f1fac5b36cfe0e9ff0eb8ec0194bf37f3062e",
     "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "delivery": "2b44b11827d6d5023cd11038c91ada7fc5e41ec0",
+    "delivery": "8c0e8f4c24ac898cd1f629a46a8ebce10c592c6a",
     "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
-  "validation": "Native amd64/arm64 source, publication, anonymous clean-host lifecycle and all 180 updates from 90 published installation variants passed. Built amd64 Chromium editor/transfer 10, graph 35 and attachment 12 passed. Existing data/originals, exact pending replay, verified backups, same-schema 0.2.0 image rollback and both directions of backup recovery verified. API 1.4.0/schema 11 unchanged. Real Safari, Firefox, full load/performance matrix and full P0 not run. publication: https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38786046525 registry: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38793437343 updates: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38793449790",
+  "validation": "Native amd64/arm64 source, publication, anonymous clean-host lifecycle and all 254 updates from 127 published installation variants passed. Built amd64 Chromium editor/transfer 11, graph 35 and attachment 12 passed. Existing data/originals, exact pending replay, verified backups, same-schema 0.2.1 image rollback and both directions of backup recovery verified. API 1.4.0/schema 11 unchanged. Real Safari, Firefox, full load/performance matrix and full P0 not run. publication: https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38884148221 registry: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38887559059 updates: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38887567450",
   "rollback": "same migration history only; otherwise restore verified backup"
 }

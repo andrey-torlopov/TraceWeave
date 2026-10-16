@@ -1,0 +1,302 @@
+{
+  "conclusion": "success",
+  "headSha": "8c0e8f4c24ac898cd1f629a46a8ebce10c592c6a",
+  "jobs": [
+    {
+      "completedAt": "2026-10-16T09:55:26Z",
+      "conclusion": "success",
+      "databaseId": 116909135131,
+      "name": "integration (ubuntu-24.04-arm)",
+      "startedAt": "2026-10-16T09:35:47Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-16T09:35:48Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-16T09:35:47Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:49Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-16T09:35:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:49Z",
+          "conclusion": "success",
+          "name": "Select exact independent source revisions",
+          "number": 3,
+          "startedAt": "2026-10-16T09:35:49Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:50Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 4,
+          "startedAt": "2026-10-16T09:35:49Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:51Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 5,
+          "startedAt": "2026-10-16T09:35:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:36:09Z",
+          "conclusion": "success",
+          "name": "Validate contract and operator failure cases",
+          "number": 6,
+          "startedAt": "2026-10-16T09:35:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:44:34Z",
+          "conclusion": "success",
+          "name": "Build independent immutable images",
+          "number": 7,
+          "startedAt": "2026-10-16T09:36:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:45:42Z",
+          "conclusion": "success",
+          "name": "Real API, media, export, restart, maintenance and restore",
+          "number": 8,
+          "startedAt": "2026-10-16T09:44:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:52:32Z",
+          "conclusion": "success",
+          "name": "Build successive synthetic versions of the same locked current sources",
+          "number": 9,
+          "startedAt": "2026-10-16T09:45:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:53:18Z",
+          "conclusion": "success",
+          "name": "Real frontend-only and backend-only transitions on current code",
+          "number": 10,
+          "startedAt": "2026-10-16T09:52:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:54:14Z",
+          "conclusion": "success",
+          "name": "Real marked fault recovery and isolation",
+          "number": 11,
+          "startedAt": "2026-10-16T09:53:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:55:23Z",
+          "conclusion": "success",
+          "name": "Real account registration, SMTP and HTTPS certificate verification",
+          "number": 12,
+          "startedAt": "2026-10-16T09:54:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:55:23Z",
+          "conclusion": "success",
+          "name": "Stop the marked synthetic installation",
+          "number": 13,
+          "startedAt": "2026-10-16T09:55:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:55:23Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 24,
+          "startedAt": "2026-10-16T09:55:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:55:23Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 25,
+          "startedAt": "2026-10-16T09:55:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:55:24Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 26,
+          "startedAt": "2026-10-16T09:55:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:55:24Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 27,
+          "startedAt": "2026-10-16T09:55:24Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38881523743/job/116909135131"
+    },
+    {
+      "completedAt": "2026-10-16T09:57:17Z",
+      "conclusion": "success",
+      "databaseId": 116909135428,
+      "name": "integration (ubuntu-24.04)",
+      "startedAt": "2026-10-16T09:35:45Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-16T09:35:47Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-16T09:35:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:48Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 2,
+          "startedAt": "2026-10-16T09:35:47Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:48Z",
+          "conclusion": "success",
+          "name": "Select exact independent source revisions",
+          "number": 3,
+          "startedAt": "2026-10-16T09:35:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:50Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 4,
+          "startedAt": "2026-10-16T09:35:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:35:52Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 5,
+          "startedAt": "2026-10-16T09:35:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:36:13Z",
+          "conclusion": "success",
+          "name": "Validate contract and operator failure cases",
+          "number": 6,
+          "startedAt": "2026-10-16T09:35:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:45:34Z",
+          "conclusion": "success",
+          "name": "Build independent immutable images",
+          "number": 7,
+          "startedAt": "2026-10-16T09:36:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:46:43Z",
+          "conclusion": "success",
+          "name": "Real API, media, export, restart, maintenance and restore",
+          "number": 8,
+          "startedAt": "2026-10-16T09:45:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:54:18Z",
+          "conclusion": "success",
+          "name": "Build successive synthetic versions of the same locked current sources",
+          "number": 9,
+          "startedAt": "2026-10-16T09:46:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:55:05Z",
+          "conclusion": "success",
+          "name": "Real frontend-only and backend-only transitions on current code",
+          "number": 10,
+          "startedAt": "2026-10-16T09:54:18Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:56:02Z",
+          "conclusion": "success",
+          "name": "Real marked fault recovery and isolation",
+          "number": 11,
+          "startedAt": "2026-10-16T09:55:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:57:13Z",
+          "conclusion": "success",
+          "name": "Real account registration, SMTP and HTTPS certificate verification",
+          "number": 12,
+          "startedAt": "2026-10-16T09:56:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:57:14Z",
+          "conclusion": "success",
+          "name": "Stop the marked synthetic installation",
+          "number": 13,
+          "startedAt": "2026-10-16T09:57:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:57:14Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 24,
+          "startedAt": "2026-10-16T09:57:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:57:14Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 25,
+          "startedAt": "2026-10-16T09:57:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:57:14Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 26,
+          "startedAt": "2026-10-16T09:57:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T09:57:14Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 27,
+          "startedAt": "2026-10-16T09:57:14Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38881523743/job/116909135428"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38881523743"
+}

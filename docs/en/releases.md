@@ -2,13 +2,17 @@
 
 *[Русский](../ru/releases.md)*
 
-Delivery **0.2.1** uses public amd64/arm64 images. The [manifest](../../releases/0.2.1.json), [default selection](../../releases/stable.json) and [tools image](../../releases/tools-image.txt) are available here and in [GitHub Release v0.2.1](https://github.com/andrey-torlopov/TraceWeave/releases/tag/v0.2.1). See the [release notes](../../releases/0.2.1-preparation.md) for changes and verification.
+Delivery **0.2.2** uses public amd64/arm64 images. The [manifest](../../releases/0.2.2.json), [default selection](../../releases/stable.json) and [tools image](../../releases/tools-image.txt) are available here and in [GitHub Release v0.2.2](https://github.com/andrey-torlopov/TraceWeave/releases/tag/v0.2.2). See the [release notes](../../releases/0.2.2-preparation.md) for changes and verification.
+
+## 0.2.2
+
+Document cards open in reading mode with formatted notes, attachments and readable attributes. The accessible ✍️ toggle beside Close exposes the existing editor without discarding shared drafts. Header controls stay visible; narrow screens and both themes are supported. API 1.4.0/schema 11 unchanged. Native publication, anonymous installation and all 254 updates passed; [verification](../../releases/verification/0.2.2/verification-summary.json).
 
 ## 0.2.1
 
 Fixed-size graph action menus, a resizable editor with per-project browser width preferences and immediate attachment-status reconciliation. The maintenance page preserves real HTML newlines. API 1.4.0/schema 11 unchanged. Native publication, anonymous installation and all 180 updates passed; [verification](../../releases/verification/0.2.1/verification-summary.json).
 
-The published 0.1.5 tags and images remain immutable, but the candidate was not promoted: update acceptance found a restore error. [The candidate record](../../releases/0.1.5-preparation.md) contains the completed checks and failure. Use release 0.2.1, which includes that correction.
+The published 0.1.5 tags and images remain immutable, but the candidate was not promoted: update acceptance found a restore error. [The candidate record](../../releases/0.1.5-preparation.md) contains the completed checks and failure. Use release 0.2.2, which includes that correction.
 
 ## New Installation
 
@@ -17,7 +21,7 @@ Use a new directory:
 ```sh
 git clone --branch main --depth 1 https://github.com/andrey-torlopov/TraceWeave.git TraceWeave
 cd TraceWeave
-./bootstrap.sh --release releases/0.2.1.json
+./bootstrap.sh --release releases/0.2.2.json
 ```
 
 Images are pinned by digest. Private sources and registry sign-in are unnecessary. Historical tags may contain earlier documentation statuses; current guides live in main.
@@ -65,11 +69,13 @@ If this check fails, locate the original runtime before continuing. Once it succ
 
 The script displays installed and available versions and offers an update. After approval it downloads images, enters maintenance, creates and verifies an offline database/originals backup and applies missing migrations through schema 11. Updating from 0.1.7–0.1.9 adds migration 11; earlier releases also apply their other missing migrations in order. Existing migration history and original files remain unchanged. No manual SQL or migration selection is required. Reload the browser tab after completion.
 
-Bootstrap selects an exact manifest by installed tools and gateway versions. Backend/frontend become 0.2.1. For installations already on schema 11, the installed tools remain unchanged; older schemas receive a coordinated tools update. PostgreSQL, gateway, runtime and storage are retained. Sessions, originals, open-tab assets and exact prepared requests remain available. See the [release notes](../../releases/0.2.1-preparation.md).
+Bootstrap selects an exact manifest by installed tools and gateway versions. Backend/frontend become 0.2.2. For installations already on schema 11, the installed tools remain unchanged; older schemas receive a coordinated tools update. PostgreSQL, gateway, runtime and storage are retained. Sessions, originals, open-tab assets and exact prepared requests remain available. See the [release notes](../../releases/0.2.2-preparation.md).
 
 Declining, end of input or non-interactive execution keeps the installed release. Use `./bootstrap.sh --yes` for an explicitly approved automated update. Bootstrap does not downgrade and directs interrupted operations to `resume`/recovery. Git pull alone does not replace containers; Docker Hub publication does not update running installations.
 
 ## Rollback and Recovery
+
+Image-only rollback from 0.2.2 to 0.2.1 is supported when the migration histories match.
 
 Image-only rollback from 0.2.1 to 0.2.0 is supported when the migration histories match.
 

@@ -1,0 +1,45 @@
+{
+  "releaseId": "0.2.2",
+  "conclusion": "passed",
+  "source": {
+    "backend": "1a9b45c6d00fb90e83e9652cad579ef0a2ba1b2c",
+    "frontend": "0d4f1fac5b36cfe0e9ff0eb8ec0194bf37f3062e",
+    "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "delivery": "8c0e8f4c24ac898cd1f629a46a8ebce10c592c6a",
+    "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "images": {
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.2@sha256:1982de532d5c14b8363bd0d32294ff2ba0690c18ec553c9a8ebcbca3cd670ee3",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.2@sha256:542f57000224bfde63a446be4b3640e7238670dbe4e8be73d42baf28858e7199",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.2@sha256:31221501ce7dedf55237d3b51e7f59fe5321546294717ad74fbe16c5b593cf99",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.2.2@sha256:26d68eed148718edf5181a43adfbab339c4114d048f371f6f0f3ce90976ed483",
+    "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
+  },
+  "nativePlatforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "migration": 11,
+  "api": "1.4.0",
+  "sourceRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38881523743",
+  "publicationRun": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38884148221",
+  "registryRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38887559059",
+  "applicationUpdateRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38887567450",
+  "browserTestRevision": "0d4f1fac5b36cfe0e9ff0eb8ec0194bf37f3062e",
+  "chromiumScenarios": {
+    "editorAndTransfer": 11,
+    "graph": 35,
+    "attachments": 12
+  },
+  "publishedInstallationVariants": 127,
+  "nativeUpdateCases": 254,
+  "updateManifestVariants": 45,
+  "rollback": "Same-schema image rollback to 0.2.1; older schemas require verified backup restore into new volumes.",
+  "notRun": [
+    "real Safari",
+    "Firefox",
+    "full load/performance matrix",
+    "complete P0 acceptance"
+  ]
+}

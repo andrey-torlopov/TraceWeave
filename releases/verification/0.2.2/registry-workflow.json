@@ -1,0 +1,238 @@
+{
+  "conclusion": "success",
+  "headSha": "8c0e8f4c24ac898cd1f629a46a8ebce10c592c6a",
+  "jobs": [
+    {
+      "completedAt": "2026-10-16T10:32:47Z",
+      "conclusion": "success",
+      "databaseId": 116928920464,
+      "name": "clean-host (ubuntu-24.04, amd64)",
+      "startedAt": "2026-10-16T10:29:29Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-16T10:29:31Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-16T10:29:29Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:29:31Z",
+          "conclusion": "success",
+          "name": "Validate input and establish an empty Docker credential directory",
+          "number": 2,
+          "startedAt": "2026-10-16T10:29:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:29:33Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 3,
+          "startedAt": "2026-10-16T10:29:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:29:38Z",
+          "conclusion": "success",
+          "name": "Prepare the HTTP test harness",
+          "number": 4,
+          "startedAt": "2026-10-16T10:29:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:30:10Z",
+          "conclusion": "success",
+          "name": "Anonymous native pull and version provenance",
+          "number": 5,
+          "startedAt": "2026-10-16T10:29:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:31:28Z",
+          "conclusion": "success",
+          "name": "Real bootstrap, HTTP contract, restart, backup and restore through the Docker-only CLI",
+          "number": 6,
+          "startedAt": "2026-10-16T10:30:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:42Z",
+          "conclusion": "success",
+          "name": "Real HTTPS, SMTP and account lifecycle using the pulled images",
+          "number": 7,
+          "startedAt": "2026-10-16T10:31:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:43Z",
+          "conclusion": "success",
+          "name": "Stop only the marked synthetic HTTP installation and retain every volume",
+          "number": 8,
+          "startedAt": "2026-10-16T10:32:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:43Z",
+          "conclusion": "success",
+          "name": "Write compact verification evidence",
+          "number": 9,
+          "startedAt": "2026-10-16T10:32:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:43Z",
+          "conclusion": "success",
+          "name": "Retain public evidence in the run log",
+          "number": 10,
+          "startedAt": "2026-10-16T10:32:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:44Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@v7",
+          "number": 11,
+          "startedAt": "2026-10-16T10:32:43Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:44Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 22,
+          "startedAt": "2026-10-16T10:32:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:44Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 23,
+          "startedAt": "2026-10-16T10:32:44Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38887559059/job/116928920464"
+    },
+    {
+      "completedAt": "2026-10-16T10:32:22Z",
+      "conclusion": "success",
+      "databaseId": 116928920952,
+      "name": "clean-host (ubuntu-24.04-arm, arm64)",
+      "startedAt": "2026-10-16T10:29:31Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-16T10:29:32Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-16T10:29:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:29:32Z",
+          "conclusion": "success",
+          "name": "Validate input and establish an empty Docker credential directory",
+          "number": 2,
+          "startedAt": "2026-10-16T10:29:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:29:33Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 3,
+          "startedAt": "2026-10-16T10:29:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:29:38Z",
+          "conclusion": "success",
+          "name": "Prepare the HTTP test harness",
+          "number": 4,
+          "startedAt": "2026-10-16T10:29:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:30:00Z",
+          "conclusion": "success",
+          "name": "Anonymous native pull and version provenance",
+          "number": 5,
+          "startedAt": "2026-10-16T10:29:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:31:11Z",
+          "conclusion": "success",
+          "name": "Real bootstrap, HTTP contract, restart, backup and restore through the Docker-only CLI",
+          "number": 6,
+          "startedAt": "2026-10-16T10:30:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:19Z",
+          "conclusion": "success",
+          "name": "Real HTTPS, SMTP and account lifecycle using the pulled images",
+          "number": 7,
+          "startedAt": "2026-10-16T10:31:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:20Z",
+          "conclusion": "success",
+          "name": "Stop only the marked synthetic HTTP installation and retain every volume",
+          "number": 8,
+          "startedAt": "2026-10-16T10:32:19Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:20Z",
+          "conclusion": "success",
+          "name": "Write compact verification evidence",
+          "number": 9,
+          "startedAt": "2026-10-16T10:32:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:20Z",
+          "conclusion": "success",
+          "name": "Retain public evidence in the run log",
+          "number": 10,
+          "startedAt": "2026-10-16T10:32:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:21Z",
+          "conclusion": "success",
+          "name": "Run actions/upload-artifact@v7",
+          "number": 11,
+          "startedAt": "2026-10-16T10:32:20Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:21Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+          "number": 22,
+          "startedAt": "2026-10-16T10:32:21Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-16T10:32:21Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 23,
+          "startedAt": "2026-10-16T10:32:21Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38887559059/job/116928920952"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38887559059"
+}
