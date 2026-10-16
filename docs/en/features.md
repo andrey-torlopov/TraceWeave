@@ -2,6 +2,20 @@
 
 *[Русский](../ru/features.md)*
 
+## Dossier and quick preview (0.2.3 candidate)
+
+These changes are prepared in source; the published stable release remains 0.2.2.
+
+**Graph / Dossier** switches views of the same nodes. Dossier includes all active nodes, including isolated nodes and groups, with **List / Cards** layouts. Gallery covers use real primary images when safely previewable, plus type, title, existing subtitle and counts. Large originals are not decoded for covers; image-free records show their type.
+
+The catalogue supports type filtering, title/update sorting and literal case-insensitive server search over saved titles, Markdown and attributes. Subtitle and tag text are not searched. Catalogue pages contain up to 50 records; load further server matches explicitly. Filters keep the investigation total and never close a selected document outside the results.
+
+Resources appear **above the note**. No attachments means no empty resource block; empty attributes do not reserve a column. Attachment captions remain distinct from filenames. Existing evidence, typed attributes and all actual relations appear beside or below the note. Incoming, outgoing, undirected, bidirectional and parallel relations retain their identities. Show in Graph selects the same node. Deep links preserve view/selection; Back/Forward restore reading and scroll. View/filter changes do not mutate the server revision.
+
+The quick inspector opens **read-only**. Edit, Delete node and Open card are at the top. Edit opens the full card with editing enabled; normal card opening starts in reading mode. Long quick-preview notes explicitly show an excerpt; the full text remains in the card. Every surface shares the same draft, saving and conflict/replay behavior.
+
+Reading cards have a **1200 CSS px** desktop minimum; editing retains the 1000 px minimum. Both clamp to narrow viewports and retain the per-project/user browser width preference. No separate workflow status such as Studied is introduced: existing user assessments remain distinct from processing state. API and database schema are unchanged.
+
 ## Reading and editing cards (0.2.2)
 
 Double-click a node or choose “Открыть карточку” (Open card) to read its title, type, formatted note, attachments and attributes. A wide screen places attributes beside the note; a phone stacks them below the note and materials. Preview and download files without enabling editing.

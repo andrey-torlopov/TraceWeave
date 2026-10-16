@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 — unreleased candidate
+
+- Prepare Dossier and read-only quick preview integration, wider reading cards and resources-before-note presentation with the existing shared editor/store.
+- Keep stable 0.2.2, immutable published tags and manifests unchanged; 0.2.3 publication and native container acceptance have not run.
+
 ## 0.2.2 — 2026-10-16
 
 - Open document cards in reading mode with formatted notes, attachments and attributes; enable the existing editor with the accessible ✍️ toggle beside Close.
