@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 — 2026-10-16
+
+- Open document cards in reading mode with formatted notes, attachments and attributes; enable the existing editor with the accessible ✍️ toggle beside Close.
+- Preserve shared drafts, project width preferences, original files and archived-project restrictions across mode changes.
+- Keep API 1.4.0/schema 11 unchanged and extend native update acceptance to all 127 published installation variants, including 0.2.1.
+
 ## 0.2.1 — 2026-10-15
 
 - Deliver fixed-size graph context menus, a resizable document editor with per-project browser preferences, and immediate attachment-status reconciliation.

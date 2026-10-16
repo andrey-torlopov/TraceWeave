@@ -2,6 +2,14 @@
 
 *[Русский](../ru/features.md)*
 
+## Reading and editing cards (0.2.2)
+
+Double-click a node or choose “Открыть карточку” (Open card) to read its title, type, formatted note, attachments and attributes. A wide screen places attributes beside the note; a phone stacks them below the note and materials. Preview and download files without enabling editing.
+
+The **✍️ Редактирование** (Editing) toggle beside Close exposes the existing form. A green frame and visible mode label show its state; Enter/Space also activate it. Toggle again to return to reading. Both modes share the same draft, with a notice for unconfirmed changes. Every new opening starts in reading mode. Archived projects cannot enable editing.
+
+Desktop cards start at a 1000 px minimum. Drag the right ↔ handle or use its arrow keys to resize; the preference is remembered for this project in this browser. Narrow screens clamp the card to the viewport.
+
 Release 0.1.8 shows all card attachments as buttons with their kind and filename. Select a button to preview one image, audio or video; other files download for local viewing. Switching stops the previous player. Add files together or consecutively. Detaching keeps the original and other attachments.
 
 - Graph investigations with documents, attributes, relations, search and editing.
