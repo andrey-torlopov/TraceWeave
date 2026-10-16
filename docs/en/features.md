@@ -2,9 +2,9 @@
 
 *[Русский](../ru/features.md)*
 
-## Dossier and quick preview (0.2.3 candidate)
+## Dossier and quick preview (0.2.3)
 
-These changes are prepared in source; the published stable release remains 0.2.2.
+Available in the published stable release 0.2.3.
 
 **Graph / Dossier** switches views of the same nodes. Dossier includes all active nodes, including isolated nodes and groups, with **List / Cards** layouts. Gallery covers use real primary images when safely previewable, plus type, title, existing subtitle and counts. Large originals are not decoded for covers; image-free records show their type.
 

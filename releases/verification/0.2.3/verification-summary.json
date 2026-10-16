@@ -1,0 +1,187 @@
+{
+  "releaseId": "0.2.3",
+  "conclusion": "passed",
+  "source": {
+    "backend": "5338ec293e459b669092d152b435edb8566e63c6",
+    "frontend": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+    "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "delivery": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+    "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "images": {
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.3@sha256:7caf8c67e41312888abf43b2c504a09ddd2be390471c3af47ab28f01ee56584b",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.3@sha256:9c6fb4be76163c65ae586294d821552ecd9b3c65637c2b311962c3e30a0f9626",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.3@sha256:2d892455589a9be02f9b6eece38e9f6743078d16d5bbd8a48a365a6a75fb1b05",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.2.3@sha256:a4194e14c0deac6287d9c3fef79eed9ca5b39e5009d82e7c76e84d0bf919029d",
+    "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
+  },
+  "nativePlatforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "migration": 11,
+  "api": "1.4.0",
+  "sourceRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38908962234",
+  "publicationRun": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38912466201",
+  "registryRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916426387",
+  "applicationUpdateRun": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916439332",
+  "browserTestRevision": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+  "chromiumScenarios": {
+    "editorAndTransfer": 19,
+    "graph": 35,
+    "attachments": 12
+  },
+  "publishedInstallationVariants": 173,
+  "nativeUpdateCases": 346,
+  "updateManifestVariants": 54,
+  "rollback": "Same-schema image rollback to 0.2.2; older schemas require verified backup restore into new volumes.",
+  "notRun": [
+    "real Safari",
+    "Firefox",
+    "full load/performance matrix",
+    "complete P0 acceptance"
+  ],
+  "initialUpdateFailures": {
+    "releaseId": "0.2.3",
+    "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916439332",
+    "firstAttemptConclusion": "failure",
+    "failures": [
+      {
+        "jobId": 117025007183,
+        "jobName": "published-update-arm64 (ubuntu-24.04-arm, arm64, v014-full, v0.1.4)",
+        "evidence": {
+          "formatVersion": 1,
+          "baseRelease": "0.1.4",
+          "baseInfrastructure": "v014-full",
+          "targetRelease": "0.2.3",
+          "nativePlatform": "linux/arm64",
+          "anonymousPull": true,
+          "checks": {},
+          "conclusion": "failed",
+          "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916439332",
+          "source": {
+            "base": {
+              "backend": "67d9c5b4ab3650d9aa0aab0d52e503252fe4b545",
+              "frontend": "361a551f78464d2a2103a86bf35a97f58bc67d7b",
+              "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "delivery": "a7fc8a0b393ff3c859d917c72ff87e875ec669fd",
+              "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "target": {
+              "backend": "5338ec293e459b669092d152b435edb8566e63c6",
+              "frontend": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+              "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "delivery": "a7fc8a0b393ff3c859d917c72ff87e875ec669fd",
+              "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "tools": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+              "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "guidedOperatorRevision": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+          "activeCheck": "anonymous_native_provenance",
+          "errorClass": "CalledProcessError",
+          "errorLocations": [
+            {
+              "path": "tools/application_update_test.py",
+              "line": 377,
+              "function": "main"
+            },
+            {
+              "path": "tools/application_update_test.py",
+              "line": 221,
+              "function": "verify"
+            },
+            {
+              "path": "tools/application_update_test.py",
+              "line": 126,
+              "function": "pull_images"
+            }
+          ],
+          "errorLocation": {
+            "path": "tools/application_update_test.py",
+            "line": 126,
+            "function": "pull_images"
+          }
+        }
+      },
+      {
+        "jobId": 117025007910,
+        "jobName": "published-update-amd64 (ubuntu-24.04, amd64, v019-0.1.9-update-tools-0.1.8-infra-0.1.3, v0.1.3)",
+        "evidence": {
+          "formatVersion": 1,
+          "baseRelease": "0.1.9",
+          "baseInfrastructure": "v019-0.1.9-update-tools-0.1.8-infra-0.1.3",
+          "targetRelease": "0.2.3",
+          "nativePlatform": "linux/amd64",
+          "anonymousPull": true,
+          "checks": {},
+          "conclusion": "failed",
+          "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916439332",
+          "source": {
+            "base": {
+              "backend": "edb5d4b8dab701f2aa1cde9ac3fc60af8dd2ecae",
+              "frontend": "abc72ebc1f4646d380d08826bf4444cf13a230f5",
+              "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "delivery": "b6adb2581faf581af50391847937d1876fcf93bd",
+              "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "tools": "e24f63ba26f4980526c769310bfd0534430e8d88",
+              "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "target": {
+              "backend": "5338ec293e459b669092d152b435edb8566e63c6",
+              "frontend": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+              "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "delivery": "b6adb2581faf581af50391847937d1876fcf93bd",
+              "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "tools": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+              "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          "guidedOperatorRevision": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+          "activeCheck": "anonymous_native_provenance",
+          "errorClass": "CalledProcessError",
+          "errorLocations": [
+            {
+              "path": "tools/application_update_test.py",
+              "line": 377,
+              "function": "main"
+            },
+            {
+              "path": "tools/application_update_test.py",
+              "line": 221,
+              "function": "verify"
+            },
+            {
+              "path": "tools/application_update_test.py",
+              "line": 126,
+              "function": "pull_images"
+            }
+          ],
+          "errorLocation": {
+            "path": "tools/application_update_test.py",
+            "line": 126,
+            "function": "pull_images"
+          }
+        }
+      }
+    ],
+    "observedFailure": "docker pull exited before installation/runtime creation; no application checks executed in these jobs",
+    "exactRegistryResponse": "not retained by the original harness; transient registry/network failure remains a hypothesis",
+    "action": "Rerun failed jobs only, with unchanged sources, images, harness and assertions."
+  },
+  "runtimeFaultObservations": {
+    "amd64": {
+      "receivingUploadAfterObservedMaintenance503": "passed",
+      "notRunObservations": []
+    },
+    "arm64": {
+      "receivingUploadAfterObservedMaintenance503": "passed",
+      "notRunObservations": []
+    }
+  }
+}

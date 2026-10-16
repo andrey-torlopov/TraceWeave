@@ -1,0 +1,85 @@
+{
+  "formatVersion": 1,
+  "releaseId": "0.2.3",
+  "frontendReleaseId": "0.2.3",
+  "frontendVersion": "0.2.3",
+  "backendVersion": "0.2.3",
+  "backendContractHash": "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+  "images": {
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.3@sha256:7caf8c67e41312888abf43b2c504a09ddd2be390471c3af47ab28f01ee56584b",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.3@sha256:9c6fb4be76163c65ae586294d821552ecd9b3c65637c2b311962c3e30a0f9626",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.1@sha256:590acfe8719c2bcb31ced642281755ecffd1a1473d70d8bb32faf27d418e81a8",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.1.4@sha256:1861615814cdb2eca20ab0a7db994e91d9aa31b021051fc41f3db01ece0764f6",
+    "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
+  },
+  "postgresMajor": 18,
+  "contractHash": "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+  "supportedClientContractHashes": [
+    "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+    "bd1c6ed182bbd63e91401bc7018593a92b76682c62c498a35a928e7dd26f832c",
+    "5b9da16997f94c15dd952224292961c2de8f90b31a12e0ff4d14da89a6048281",
+    "489ebec910e10c88715e1d1906ddd6614cedb6dcfbe43844f3e4ca4ee0a22852"
+  ],
+  "migrations": [
+    {
+      "version": 1,
+      "sha256": "c30e6a5f2dda4be6a951555330393741f43d2beb4fa69c722e0295cf0aa547ea"
+    },
+    {
+      "version": 2,
+      "sha256": "5631c54f9a47da710d10c8c6bac86c5651e6181c0e7b267bf3153c4a329498b2"
+    },
+    {
+      "version": 3,
+      "sha256": "d8abde0ecf5fbc8e740d926def20288ab5bcdec6a1425943fc4a4034be00f927"
+    },
+    {
+      "version": 4,
+      "sha256": "4b5d9cb32c93361a11e61b27f2b6b77c3e6835d87f94530befcdd54e1eb51f88"
+    },
+    {
+      "version": 5,
+      "sha256": "19b968caedbe37512cdd5856c345e937894125f7b6d34fea103223179909262b"
+    },
+    {
+      "version": 6,
+      "sha256": "46f035d60a0a3abd06ca418fb12ca215ffdec4355ae40330b59ee44c28043889"
+    },
+    {
+      "version": 7,
+      "sha256": "7164070e645dbd0172b722de5d7fbeaf2c4a976d628f71e939e9bad9efa8544e"
+    },
+    {
+      "version": 8,
+      "sha256": "2e540dbd4b04d39dc7187393611dbd19142e4770c4180296f537f376e2d64c45"
+    },
+    {
+      "version": 9,
+      "sha256": "b1c43ecc34ff5769ef9c5fb4df6b131900454246f05ed6badd8452a55e5d45e8"
+    },
+    {
+      "version": 10,
+      "sha256": "371861ae0614ad196634457675df84bcd6722b6906eb21c06ef12864c08a0f18"
+    },
+    {
+      "version": 11,
+      "sha256": "7ded2a5cddf1ba1e5a598acebed3e9eab26b0e7788ea809eea96646c22b4d399"
+    }
+  ],
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "source": {
+    "backend": "5338ec293e459b669092d152b435edb8566e63c6",
+    "frontend": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+    "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "delivery": "a7fc8a0b393ff3c859d917c72ff87e875ec669fd",
+    "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tools": "2b44b11827d6d5023cd11038c91ada7fc5e41ec0",
+    "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "validation": "Native amd64/arm64 source, publication, anonymous clean-host lifecycle and all 346 updates from 173 published installation variants passed. Built amd64 Chromium editor/transfer 19, graph 35 and attachment 12 passed. Existing data/originals, exact pending replay, verified backups, same-schema 0.2.2 image rollback and both directions of backup recovery verified. API 1.4.0/schema 11 unchanged. Real Safari, Firefox, full load/performance matrix and full P0 not run. publication: https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38912466201 registry: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916426387 updates: https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916439332 Installed gateway/database retained; tools retained on schema 11, explicitly upgraded for older schemas.",
+  "rollback": "same migration history only; otherwise restore verified backup"
+}

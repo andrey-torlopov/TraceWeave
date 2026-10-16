@@ -1,0 +1,31 @@
+{
+  "version": "0.2.3",
+  "images": {
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.3@sha256:7caf8c67e41312888abf43b2c504a09ddd2be390471c3af47ab28f01ee56584b",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.3@sha256:9c6fb4be76163c65ae586294d821552ecd9b3c65637c2b311962c3e30a0f9626",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.2.3@sha256:a4194e14c0deac6287d9c3fef79eed9ca5b39e5009d82e7c76e84d0bf919029d",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.3@sha256:2d892455589a9be02f9b6eece38e9f6743078d16d5bbd8a48a365a6a75fb1b05"
+  },
+  "sourceTags": {
+    "backend": "v0.2.3",
+    "frontend": "v0.2.3",
+    "delivery": "v0.2.3"
+  },
+  "imageTags": {
+    "backend": "docker.io/andreytorlopov/traceweave-backend:0.2.3",
+    "frontend": "docker.io/andreytorlopov/traceweave-frontend:0.2.3",
+    "gateway": "docker.io/andreytorlopov/traceweave-gateway:0.2.3",
+    "tools": "docker.io/andreytorlopov/traceweave-tools:0.2.3"
+  },
+  "source": {
+    "backend": "5338ec293e459b669092d152b435edb8566e63c6",
+    "frontend": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+    "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "delivery": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+    "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "runURL": "https://github.com/andrey-torlopov/TraceWeaveBackend/actions/runs/38912466201",
+  "validation": "native amd64/arm64 contract, frontend, API, media, restore, faults, accounts and HTTPS checks passed; clean-host acceptance pending",
+  "browserTestRevision": "941a86d5e763fa930e4c45809168c3a0849f5ced"
+}

@@ -1,0 +1,10 @@
+{
+  "amd64": {
+    "receivingUploadAfterObservedMaintenance503": "passed",
+    "notRunObservations": []
+  },
+  "arm64": {
+    "receivingUploadAfterObservedMaintenance503": "passed",
+    "notRunObservations": []
+  }
+}

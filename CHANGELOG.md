@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.2.3 — unreleased candidate
+## 0.2.3 — 2026-10-16
 
-- Prepare Dossier and read-only quick preview integration, wider reading cards and resources-before-note presentation with the existing shared editor/store.
-- Keep stable 0.2.2, immutable published tags and manifests unchanged; 0.2.3 publication and native container acceptance have not run.
+- Deliver Dossier and read-only quick preview, wider reading cards and resources-before-note presentation with the existing shared editor/store.
+- Publish native amd64/arm64 images and stable 0.2.3 after anonymous installation and all 346 updates from 173 published installation variants. API 1.4.0/schema 11 and previous release tags/manifests remain unchanged.
 
 ## 0.2.2 — 2026-10-16
 

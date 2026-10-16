@@ -1,0 +1,78 @@
+{
+  "formatVersion": 1,
+  "baseRelease": "0.2.2",
+  "baseInfrastructure": "v022-0.2.2-update-tools-0.2.0-infra-0.1.7",
+  "targetRelease": "0.2.3",
+  "nativePlatform": "linux/amd64",
+  "anonymousPull": true,
+  "checks": {
+    "anonymous_native_provenance": "passed",
+    "published_previous_bootstrap": "passed",
+    "guided_automatic_backup_migration": "passed",
+    "graph_settings_frontend_asset": "passed",
+    "old_pending_relation_exact_replay": "passed",
+    "parallel_four_directions_and_isolated_deletion": "passed",
+    "files_and_reports_after_update": "passed",
+    "evidence_type_existing_and_new": "passed",
+    "repeat_bootstrap": "passed",
+    "rollback_matches_migration_history": "passed",
+    "backup_restore_new_volumes": "passed",
+    "safety_backup_restores_new_schema": "passed",
+    "marked_cleanup_retains_volumes": "passed"
+  },
+  "conclusion": "passed",
+  "runURL": "https://github.com/andrey-torlopov/TraceWeave/actions/runs/38916439332",
+  "source": {
+    "base": {
+      "backend": "1a9b45c6d00fb90e83e9652cad579ef0a2ba1b2c",
+      "frontend": "0d4f1fac5b36cfe0e9ff0eb8ec0194bf37f3062e",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "246590a9f7f52c85af81d93e36540a8409bb59cd",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tools": "6b86a5c67dcd2d60621cd382c162e91b2d5afc20",
+      "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "target": {
+      "backend": "5338ec293e459b669092d152b435edb8566e63c6",
+      "frontend": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "246590a9f7f52c85af81d93e36540a8409bb59cd",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tools": "6b86a5c67dcd2d60621cd382c162e91b2d5afc20",
+      "toolsDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "guidedOperatorRevision": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+  "images": {
+    "docker.io/andreytorlopov/traceweave-backend:0.2.2@sha256:1982de532d5c14b8363bd0d32294ff2ba0690c18ec553c9a8ebcbca3cd670ee3": {
+      "imageId": "sha256:532f1f4615f3942d36bbf6273b855964bf66b538bc5160b08e00eaa4ecae1282",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.2.2@sha256:542f57000224bfde63a446be4b3640e7238670dbe4e8be73d42baf28858e7199": {
+      "imageId": "sha256:06384902d6698c4f663a9bfa4b88339595b9a943d6898a739ff985cfa7296f1c",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-tools:0.2.0@sha256:0a82d7d29792074f17d23ef860f92e7b216f60c97d7fcba396fcb49cef569519": {
+      "imageId": "sha256:9f44ebf7a762ba60e98f0b872a968da42503897df0f9b3fc7eef517727d1253e",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-gateway:0.1.7@sha256:bc075586fbba3efe40760bc9213a778126950a36ad8a5f82c920d81b3bb26e24": {
+      "imageId": "sha256:016654759b79ede423426641e6c23c594fa2452fe80a53c0021331a8be7fcb70",
+      "platform": "linux/amd64"
+    },
+    "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c": {
+      "imageId": "sha256:2e182ed2ff8f5d0835353864264437a26dffc542a9a6c677ec495aa54e491627",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-backend:0.2.3@sha256:7caf8c67e41312888abf43b2c504a09ddd2be390471c3af47ab28f01ee56584b": {
+      "imageId": "sha256:1315fbfcf781fa60594b088a943423d96352b400a5ef6a4fdd3d600ab0599bc0",
+      "platform": "linux/amd64"
+    },
+    "docker.io/andreytorlopov/traceweave-frontend:0.2.3@sha256:9c6fb4be76163c65ae586294d821552ecd9b3c65637c2b311962c3e30a0f9626": {
+      "imageId": "sha256:0abc9207d6f03c27b0db2e17a1d389d106145489bfc5bd958106ac29f9f904f3",
+      "platform": "linux/amd64"
+    }
+  }
+}

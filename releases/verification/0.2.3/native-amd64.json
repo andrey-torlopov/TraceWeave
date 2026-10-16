@@ -1,0 +1,108 @@
+{
+  "release": {
+    "formatVersion": 1,
+    "releaseId": "0.2.3",
+    "frontendReleaseId": "0.2.3",
+    "frontendVersion": "0.2.3",
+    "backendVersion": "0.2.3",
+    "backendContractHash": "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+    "images": {
+      "backend": "sha256:1315fbfcf781fa60594b088a943423d96352b400a5ef6a4fdd3d600ab0599bc0",
+      "frontend": "sha256:0abc9207d6f03c27b0db2e17a1d389d106145489bfc5bd958106ac29f9f904f3",
+      "tools": "sha256:94039b68661165b49a80c965a8d9dc459e9d45b492ec234dd16e1917fcd11425",
+      "gateway": "sha256:115dec7171328391baec4e7af1ea94480c11b30548715b7723ccbe667e47f9c5",
+      "postgres": "postgres:18.6-bookworm@sha256:afc7e2d441324c0388fa80c3d24f733b4194a4eb7f47dd8ee2b08eb1a24a647c"
+    },
+    "postgresMajor": 18,
+    "contractHash": "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+    "supportedClientContractHashes": [
+      "e968d17ca4e52d7768236d741595f6fc0e33b2978a2ec7c28ce8dc48e8f60c56",
+      "bd1c6ed182bbd63e91401bc7018593a92b76682c62c498a35a928e7dd26f832c",
+      "5b9da16997f94c15dd952224292961c2de8f90b31a12e0ff4d14da89a6048281",
+      "489ebec910e10c88715e1d1906ddd6614cedb6dcfbe43844f3e4ca4ee0a22852"
+    ],
+    "migrations": [
+      {
+        "version": 1,
+        "sha256": "c30e6a5f2dda4be6a951555330393741f43d2beb4fa69c722e0295cf0aa547ea"
+      },
+      {
+        "version": 2,
+        "sha256": "5631c54f9a47da710d10c8c6bac86c5651e6181c0e7b267bf3153c4a329498b2"
+      },
+      {
+        "version": 3,
+        "sha256": "d8abde0ecf5fbc8e740d926def20288ab5bcdec6a1425943fc4a4034be00f927"
+      },
+      {
+        "version": 4,
+        "sha256": "4b5d9cb32c93361a11e61b27f2b6b77c3e6835d87f94530befcdd54e1eb51f88"
+      },
+      {
+        "version": 5,
+        "sha256": "19b968caedbe37512cdd5856c345e937894125f7b6d34fea103223179909262b"
+      },
+      {
+        "version": 6,
+        "sha256": "46f035d60a0a3abd06ca418fb12ca215ffdec4355ae40330b59ee44c28043889"
+      },
+      {
+        "version": 7,
+        "sha256": "7164070e645dbd0172b722de5d7fbeaf2c4a976d628f71e939e9bad9efa8544e"
+      },
+      {
+        "version": 8,
+        "sha256": "2e540dbd4b04d39dc7187393611dbd19142e4770c4180296f537f376e2d64c45"
+      },
+      {
+        "version": 9,
+        "sha256": "b1c43ecc34ff5769ef9c5fb4df6b131900454246f05ed6badd8452a55e5d45e8"
+      },
+      {
+        "version": 10,
+        "sha256": "371861ae0614ad196634457675df84bcd6722b6906eb21c06ef12864c08a0f18"
+      },
+      {
+        "version": 11,
+        "sha256": "7ded2a5cddf1ba1e5a598acebed3e9eab26b0e7788ea809eea96646c22b4d399"
+      }
+    ],
+    "platforms": [
+      "linux/amd64"
+    ],
+    "source": {
+      "backend": "5338ec293e459b669092d152b435edb8566e63c6",
+      "frontend": "941a86d5e763fa930e4c45809168c3a0849f5ced",
+      "backendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "frontendDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "delivery": "04e8c058aa594f4a7cdc722ebf7003605f034f15",
+      "deliveryDiffHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "validation": "built; run integration before publication",
+    "rollback": "same migration history only; otherwise restore verified backup"
+  },
+  "components": [
+    "backend",
+    "frontend",
+    "gateway",
+    "tools"
+  ],
+  "arch": "amd64",
+  "sourceTags": {
+    "backend": "v0.2.3",
+    "frontend": "v0.2.3",
+    "delivery": "v0.2.3"
+  },
+  "versions": {
+    "backend": "0.2.3",
+    "frontend": "0.2.3",
+    "gateway": "0.2.3",
+    "tools": "0.2.3"
+  },
+  "nativeDigests": {
+    "backend": "sha256:89a69f85bf16e2cd37df38a54e984d2045e0ac7cec6a688fe73c964b7a688053",
+    "frontend": "sha256:fa0f4c515f9f9e86049faf7a2051152dfbb21cdf6581976e6100fab7070664f4",
+    "gateway": "sha256:c45b61ce530eaee08e5cbc916333f5e1431d36383f82c65274f758c3ed3976d3",
+    "tools": "sha256:b5c4b6d7c636661ffb24aea9742e65c4857736d83411eb700be19fcfd5283d6c"
+  }
+}
